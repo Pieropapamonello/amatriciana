@@ -1,3 +1,13 @@
+---
+title: Matrice Orari
+emoji: 📅
+colorFrom: green
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 📅 Matrice Orari
 
 Web app single-page per la visualizzazione e generazione della **matrice settimanale dei turni di lavoro** per **Dipendenti** e **Tutor**.
