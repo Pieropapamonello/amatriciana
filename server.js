@@ -55,6 +55,12 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ ok }));
   }
 
+  if (req.url === '/api/gemini-key' && req.method === 'GET') {
+    const key = process.env.GEMINI_KEY || '';
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ key }));
+  }
+
   const filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
   const ext = path.extname(filePath);
 
