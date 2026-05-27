@@ -4,8 +4,8 @@
   "description": "Matrice settimanale dei turni di lavoro",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#eaf7ff",
-  "theme_color": "#5c9bff",
+  "background_color": "#e8edf3",
+  "theme_color": "#1B1464",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>",
