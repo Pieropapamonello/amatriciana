@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = 7860;
 
@@ -14,7 +15,19 @@ const MIME = {
   '.ico':  'image/x-icon',
 };
 
-const server = http.createServer((req, res) => {
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+      catch { resolve({}); }
+    });
+    req.on('error', reject);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
   if (req.url === '/api/auth-config') {
     const email    = process.env.FB_EMAIL || '';
     const password = process.env.FB_PASS  || '';
@@ -24,6 +37,22 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     return res.end(JSON.stringify({ email, password }));
+  }
+
+  if (req.url === '/api/admin-verify' && req.method === 'POST') {
+    const adminPass = process.env.ADMIN_PASS || '';
+    if (!adminPass) {
+      res.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ ok: false, error: 'Password admin non configurata' }));
+    }
+    const body = await readBody(req);
+    const pw = (body.password || '').normalize('NFC');
+    const expected = adminPass.normalize('NFC');
+    const a = Buffer.from(pw);
+    const b = Buffer.from(expected);
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok }));
   }
 
   const filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);

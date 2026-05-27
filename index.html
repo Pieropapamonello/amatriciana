@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#5c9bff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/manifest.json" />
   <title>Matrice Orari</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3052,14 +3056,9 @@ function buildHolidayMapForYear(year){
       messagingSenderId: '1013648015559',
       appId:             '1:1013648015559:web:bc4ffffb103ebac7eafee2'
     };
-    // ► STEP 2: email dell'utente Firebase Authentication
-    const FIREBASE_EMAIL = 'vitoblackpoint@gmail.com';
-    // ► STEP 3: la password Firebase deve coincidere con ADMIN_PASS qui sotto
-
     let _fbApp = null, _fbAuth = null, _fbDb = null, _fbReady = false;
-    let _fbInitPromise = Promise.resolve(); // risolve appena Firebase è pronto
-    let _adminPass = ''; // caricata da /api/auth-config
-    const _FB_DOC = 'userdata/main'; // unico documento Firestore
+    let _fbInitPromise = Promise.resolve();
+    const _FB_DOC = 'userdata/main';
 
     function _fbConfigured(){
       return FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('INSERISCI');
@@ -3073,13 +3072,9 @@ function buildHolidayMapForYear(year){
         _fbDb   = firebase.firestore(_fbApp);
       } catch(e){ console.warn('[FB] init error:', e); return (_fbInitPromise = Promise.resolve()); }
 
-      // Carica la password da /api/auth-config, poi fa il sign-in
       _fbInitPromise = fetch('/api/auth-config')
         .then(r => r.ok ? r.json() : Promise.reject(r.status))
-        .then(cfg => {
-          _adminPass = cfg.password || '';
-          return _fbAuth.signInWithEmailAndPassword(cfg.email || FIREBASE_EMAIL, _adminPass);
-        })
+        .then(cfg => _fbAuth.signInWithEmailAndPassword(cfg.email, cfg.password))
         .then(() => { _fbReady = true; })
         .catch(err => console.warn('[FB] auth error (app funziona lo stesso con localStorage):', err && err.message ? err.message : err));
       return _fbInitPromise;
@@ -3118,9 +3113,6 @@ function buildHolidayMapForYear(year){
     // ===== FINE FIREBASE =====
 
     // ===== ADMIN =====
-    // La password admin è caricata da /api/auth-config a runtime.
-    // La variabile _adminPass viene impostata da initFirebase().
-    // Per il login offline (locale) usa la stessa password Firebase.
 
     function isAdminSession(){
       try{ return sessionStorage.getItem('adminSession') === '1'; } catch(e){ return false; }
@@ -3181,20 +3173,34 @@ function buildHolidayMapForYear(year){
       const errEl = document.getElementById('adminPassError');
 
       document.getElementById('confirmAdminBtn').addEventListener('click', ()=>{
-        if(!_adminPass){
-          errEl.textContent = 'Credenziali non ancora caricate, riprova tra un secondo.';
-          errEl.style.display = 'block'; return;
-        }
-        if(passInput.value === _adminPass){
-          setAdminSession(true);
-          errEl.style.display = 'none';
-          passInput.value = '';
-          closeModal('adminModal');
-          updateAdminUI();
-        } else {
+        const pw = passInput.value;
+        if(!pw){ errEl.style.display = 'block'; return; }
+        const btn = document.getElementById('confirmAdminBtn');
+        btn.disabled = true;
+        fetch('/api/admin-verify', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({password: pw})
+        })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          if(data.ok){
+            setAdminSession(true);
+            errEl.style.display = 'none';
+            passInput.value = '';
+            closeModal('adminModal');
+            updateAdminUI();
+          } else {
+            errEl.style.display = 'block';
+            passInput.focus();
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          errEl.textContent = 'Errore di rete, riprova.';
           errEl.style.display = 'block';
-          passInput.focus();
-        }
+        });
       });
       passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('confirmAdminBtn').click(); });
 
@@ -6148,6 +6154,7 @@ function buildHolidayMapForYear(year){
     });
     
     init();
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
   </script>
 
 </body>
