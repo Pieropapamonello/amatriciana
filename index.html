@@ -978,7 +978,13 @@
       box-shadow: 0 14px 30px rgba(79,70,229,0.14);
     }
     .ok-btn:disabled{filter: grayscale(0.2); opacity: 0.55;}
-    .btn:focus-visible, .ok-btn:focus-visible{ outline: 3px solid rgba(0,102,204,0.25); outline-offset: 3px; }
+    .btn:focus-visible, .ok-btn:focus-visible, .icon-btn:focus-visible, .segmented button:focus-visible, select:focus-visible, input:focus-visible{
+      outline: 3px solid rgba(0,102,204,0.40); outline-offset: 2px;
+    }
+    .skip-link{
+      position:absolute; top:-100px; left:16px; background:#0066cc; color:#fff; padding:8px 16px; border-radius:4px; z-index:99999; font-weight:700; font-size:14px;
+    }
+    .skip-link:focus{ top: 8px; }
     .ok-btn:disabled{filter: grayscale(0.2); opacity: 0.55;}
     .row-actions .icon-btn{
       width: 52px;
@@ -1600,6 +1606,7 @@
 </head>
 
 <body>
+  <a href="#previewCard" class="skip-link">Vai alla matrice</a>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
@@ -1701,6 +1708,9 @@
         <div class="sheet-tool-btn" id="sheetImport">
           <i class="fa-solid fa-file-import"></i><span>Importa</span>
         </div>
+        <div class="sheet-tool-btn" id="sheetShareLink">
+          <i class="fa-solid fa-link"></i><span>Link</span>
+        </div>
       </div>
     </div>
     <input type="file" id="importFileInput" accept=".json" style="display:none;" />
@@ -1725,6 +1735,14 @@
         </div>
         <div class="card-body">
 
+          <!-- Profilo rapido: seleziona un collega per caricare la sua config -->
+          <div id="quickProfileWrap" style="margin-bottom:10px;display:none;">
+            <span class="control-label">Carica profilo collega</span>
+            <select class="select-like" id="quickProfileSelect" style="width:100%;">
+              <option value="">— Configura manualmente —</option>
+            </select>
+          </div>
+
           <div class="controls-grid">
 
             <!-- Step 1: Ruolo -->
@@ -1747,7 +1765,7 @@
             <div class="ctrl-item">
               <div id="step-team-input" style="display:none;">
                 <span class="control-label">Team</span>
-                <select class="select-like" id="teamSelect">
+                <select class="select-like" id="teamSelect" aria-label="Seleziona team">
                   <option value="">-- Seleziona team --</option>
                 </select>
               </div>
@@ -1762,7 +1780,7 @@
             <div class="ctrl-item">
               <div id="step-hours-input">
                 <span class="control-label">Monte ore</span>
-                <select class="select-like" id="hoursSelect" style="min-width:170px;">
+                <select class="select-like" id="hoursSelect" style="min-width:170px;" aria-label="Monte ore settimanali">
                   <option value="">-- Seleziona --</option>
                   <option value="20h">20h settimanali</option>
                   <option value="30h">30h settimanali</option>
@@ -2008,6 +2026,45 @@
             </div>
           </div>
           <div id="swapResult" style="display:none; margin-top:12px;"></div>
+        </div>
+      </section>
+
+      <!-- Dashboard statistiche -->
+      <section class="card" id="statsCard" style="display:none;">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Statistiche</div>
+            <div class="card-sub">Riepilogo mensile dei turni generati.</div>
+          </div>
+        </div>
+        <div class="card-body" id="statsBody"></div>
+      </section>
+
+      <!-- Confronta turni side-by-side -->
+      <section class="card" id="compareCard" style="display:none;">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Confronta Turni</div>
+            <div class="card-sub">Visualizza due colleghi fianco a fianco per una settimana.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="controls-grid" style="gap:8px;margin-bottom:10px;">
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Collega A</span>
+              <select class="select-like" id="compareA" style="width:100%;"><option value="">—</option></select>
+            </div>
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Collega B</span>
+              <select class="select-like" id="compareB" style="width:100%;"><option value="">—</option></select>
+            </div>
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Settimana</span>
+              <input type="date" id="compareWeek" class="select-like" style="width:100%;" />
+            </div>
+          </div>
+          <button class="btn primary" id="compareBtn" type="button"><i class="fa-solid fa-columns"></i> Confronta</button>
+          <div id="compareResult" style="display:none;margin-top:12px;overflow-x:auto;"></div>
         </div>
       </section>
 
@@ -3021,6 +3078,47 @@ function buildHolidayMapForYear(year){
         sub.textContent = `${roleLabel} · ${state.durationKey} · ${computeTotalWeeks()} settimane`;
       }
       if(typeof updateTodayCard === 'function') updateTodayCard();
+      if(typeof updateStats === 'function') updateStats(weeks);
+    }
+
+    function updateStats(weeks){
+      const card = document.getElementById('statsCard');
+      const body = document.getElementById('statsBody');
+      if(!card || !body) return;
+      if(!state.generated || !weeks){ card.style.display = 'none'; return; }
+      card.style.display = '';
+      const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      const byMonth = {};
+      weeks.forEach(w=>{
+        w.days.forEach(d=>{
+          const key = d.dateObj.getFullYear()+'-'+String(d.dateObj.getMonth()).padStart(2,'0');
+          if(!byMonth[key]) byMonth[key] = {label: MESI[d.dateObj.getMonth()]+' '+d.dateObj.getFullYear(), work:0, rest:0, holiday:0, totalMin:0, shifts:{}};
+          const m = byMonth[key];
+          if(d.isRest) m.rest++;
+          else {
+            m.work++;
+            if(d.isHoliday) m.holiday++;
+            m.totalMin += state.durationMinutes || 0;
+            const t = d.start; m.shifts[t] = (m.shifts[t]||0)+1;
+          }
+        });
+      });
+      let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
+      Object.values(byMonth).forEach(m=>{
+        const h = Math.floor(m.totalMin/60), mm = m.totalMin%60;
+        const topShift = Object.entries(m.shifts).sort((a,b)=>b[1]-a[1])[0];
+        html += '<div style="border:1px solid var(--stroke);border-radius:6px;padding:12px;">';
+        html += '<div style="font-weight:800;font-size:13px;margin-bottom:8px;">'+m.label+'</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;">';
+        html += '<div><span style="color:var(--muted);">Lavoro</span><br><strong>'+m.work+' gg</strong></div>';
+        html += '<div><span style="color:var(--muted);">Riposi</span><br><strong style="color:var(--danger);">'+m.rest+' gg</strong></div>';
+        html += '<div><span style="color:var(--muted);">Ore totali</span><br><strong>'+h+'h'+(mm?' '+mm+'m':'')+'</strong></div>';
+        if(topShift) html += '<div><span style="color:var(--muted);">Turno freq.</span><br><strong>'+topShift[0]+' (×'+topShift[1]+')</strong></div>';
+        if(m.holiday) html += '<div><span style="color:var(--muted);">Festivi</span><br><strong>'+m.holiday+'</strong></div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
     }
 
     // --------- Modals & selettori ---------
@@ -3365,6 +3463,8 @@ function buildHolidayMapForYear(year){
       if(!isAdmin && findC) findC.style.display = 'none';
       if(!isAdmin && teamC) teamC.style.display = 'none';
       if(!isAdmin && srchC) srchC.style.display = 'none';
+      const compC = document.getElementById('compareCard');
+      if(!isAdmin && compC) compC.style.display = 'none';
       // Export ICS (matrice collega)
       const exportIcsWrap = document.getElementById('exportIcsWrap');
       if(exportIcsWrap) exportIcsWrap.style.display = isAdmin ? '' : 'none';
@@ -3417,8 +3517,9 @@ function buildHolidayMapForYear(year){
         const swapC = document.getElementById('swapCard');
         const findC = document.getElementById('findColleagueCard');
         const srchC = document.getElementById('searchDateCard');
+        const compC = document.getElementById('compareCard');
         const btn   = document.getElementById('cercaOrarioBtn');
-        const cards = [swapC, findC, srchC].filter(Boolean);
+        const cards = [swapC, findC, srchC, compC].filter(Boolean);
         const visible = cards.some(c => c.style.display !== 'none');
         cards.forEach(c => c.style.display = visible ? 'none' : '');
         if(btn) btn.classList.toggle('active', !visible);
@@ -3621,6 +3722,7 @@ function buildHolidayMapForYear(year){
             </div>
             <div style="display:flex;align-items:center;gap:4px;">
               <button class="btn-icon-sm view" title="Vedi matrice" data-id="${c.id}"><i class="fa-solid fa-eye"></i></button>
+              <button class="btn-icon-sm tg" title="Collega Telegram" data-id="${c.id}" style="color:#229ED9;"><i class="fa-brands fa-telegram"></i></button>
               <div class="colleague-actions" ${isAdmin ? '' : 'style="display:none"'}>
                 <button class="btn-icon-sm edit" title="Modifica" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-icon-sm del" title="Elimina" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
@@ -3629,6 +3731,7 @@ function buildHolidayMapForYear(year){
 
           row.querySelector('.view').addEventListener('click', () => openColleagueMatrix(c));
           row.querySelector('.colleague-info').addEventListener('click', () => openColleagueMatrix(c));
+          row.querySelector('.tg').addEventListener('click', () => connectTelegram(c));
           if(isAdmin){
             row.querySelector('.edit').addEventListener('click', () => openColleagueModal(c.id));
             row.querySelector('.del').addEventListener('click', () => {
@@ -6052,6 +6155,31 @@ function buildHolidayMapForYear(year){
       }
     }
 
+    async function connectTelegram(c){
+      try{
+        const info = await fetch('/api/telegram/info').then(r=>r.json());
+        if(!info.enabled || !info.botUsername){
+          toast('Telegram non attivo', 'L\'admin deve configurare TELEGRAM_BOT_TOKEN e TELEGRAM_BOT_USERNAME sul server.');
+          return;
+        }
+        const url = `https://t.me/${info.botUsername}?start=${encodeURIComponent(c.id)}`;
+        window.open(url, '_blank');
+        toast('Apri Telegram', 'Premi "Avvia" nel bot per collegare ' + c.name);
+      } catch(e){
+        toast('Errore', 'Impossibile contattare il server.');
+      }
+    }
+
+    function getShareUrl(){
+      const p = new URLSearchParams();
+      if(state.role) p.set('role', state.role);
+      if(state.startWeekISO) p.set('week', state.startWeekISO);
+      if(state.anchorPatternIndex !== null) p.set('opt', String(state.anchorPatternIndex));
+      if(state.durationKey) p.set('hours', state.durationKey);
+      if(state.team) p.set('team', String(state.team));
+      return window.location.origin + window.location.pathname + '?' + p.toString();
+    }
+
     async function savePng(){
       if(!state.generated){ toast('Matrice assente', 'Genera prima la matrice.'); return; }
       const btn = document.getElementById('saveTopBtn');
@@ -6172,6 +6300,27 @@ function buildHolidayMapForYear(year){
         state.startMonth = parseISODate(BASE_START_ISO).getMonth();
       }
 
+      // Deep link: override da URL params (?role=tutor&week=2026-06-02&opt=3&hours=30h&team=7)
+      (function(){
+        const p = new URLSearchParams(window.location.search);
+        if(p.has('role')){
+          const r = p.get('role');
+          if(r === 'dipendente' || r === 'tutor'){ state.role = r; setActiveRole(r); }
+        }
+        if(p.has('week')) state.startWeekISO = p.get('week');
+        if(p.has('opt')){
+          const o = Number(p.get('opt'));
+          if(Number.isFinite(o) && o >= 0) state.anchorPatternIndex = o;
+        }
+        if(p.has('hours')){
+          const h = p.get('hours');
+          const DURATIONS_MAP = {'20h':240,'30h':360,'33h':396,'40h':480};
+          if(DURATIONS_MAP[h]){ state.durationKey = h; state.durationMinutes = DURATIONS_MAP[h]; }
+        }
+        if(p.has('team')){ state.team = Number(p.get('team')) || null; }
+        if(p.has('role') && p.has('week') && p.has('opt') && p.has('hours')) state.generated = true;
+      })();
+
       // Ruolo operatore (Dipendente/Tutor)
       initRole();
 
@@ -6196,11 +6345,121 @@ function buildHolidayMapForYear(year){
       // Team e cerca per data
       initTeam();
 
+      // Quick profile selector
+      (function(){
+        const wrap = document.getElementById('quickProfileWrap');
+        const sel = document.getElementById('quickProfileSelect');
+        if(!wrap || !sel) return;
+        function refreshProfiles(){
+          if(!state.colleghi.length){ wrap.style.display = 'none'; return; }
+          wrap.style.display = '';
+          const saved = safeStorageGet('quickProfileId') || '';
+          sel.innerHTML = '<option value="">— Configura manualmente —</option>';
+          state.colleghi.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(c=>{
+            const o = document.createElement('option');
+            o.value = c.id; o.textContent = c.name + ' (' + (c.role==='tutor'?'Tutor':'Dip') + (c.team?' T'+c.team:'') + ')';
+            if(c.id === saved) o.selected = true;
+            sel.appendChild(o);
+          });
+        }
+        sel.addEventListener('change', ()=>{
+          const id = sel.value;
+          if(!id){ safeStorageRemove('quickProfileId'); return; }
+          safeStorageSet('quickProfileId', id);
+          const c = state.colleghi.find(x=>x.id===id);
+          if(!c) return;
+          state.role = c.role || 'dipendente';
+          state.durationKey = c.durationKey;
+          state.durationMinutes = c.durationMinutes;
+          state.startWeekISO = c.startWeekISO;
+          state.anchorPatternIndex = c.anchorPatternIndex;
+          state.team = c.team || null;
+          state.generated = !!(c.startWeekISO && c.anchorPatternIndex !== null && c.durationMinutes);
+          setActiveRole(state.role);
+          safeStorageSet('operatorRole', state.role);
+          if(c.durationKey) safeStorageSet('durationKey', c.durationKey);
+          if(c.startWeekISO) safeStorageSet('startWeekISO', c.startWeekISO);
+          if(c.anchorPatternIndex !== null) safeStorageSet('anchorPatternIndex', String(c.anchorPatternIndex));
+          syncStepsFromState();
+          if(state.generated && typeof render === 'function') render();
+          toast('Profilo caricato', c.name);
+        });
+        const _origSaveColleghi = saveColleghi;
+        saveColleghi = function(){ _origSaveColleghi(); refreshProfiles(); };
+        _fbInitPromise.then(()=> setTimeout(refreshProfiles, 300));
+        refreshProfiles();
+      })();
+
       // Scambi orari
       initSwap();
 
       // Trova collega
       initFindColleague();
+
+      // Confronta turni
+      (function(){
+        const selA = document.getElementById('compareA');
+        const selB = document.getElementById('compareB');
+        const weekInp = document.getElementById('compareWeek');
+        const btn = document.getElementById('compareBtn');
+        const result = document.getElementById('compareResult');
+        if(!selA || !btn) return;
+        function populateCompare(){
+          [selA, selB].forEach(sel=>{
+            const val = sel.value;
+            sel.innerHTML = '<option value="">— Seleziona —</option>';
+            state.colleghi.filter(c=>c.startWeekISO && c.anchorPatternIndex !== null).forEach(c=>{
+              const o = document.createElement('option');
+              o.value = c.id; o.textContent = c.name;
+              sel.appendChild(o);
+            });
+            sel.value = val;
+          });
+        }
+        populateCompare();
+        _fbInitPromise.then(()=> setTimeout(populateCompare, 500));
+        const today = new Date();
+        const mon = new Date(today); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+        weekInp.value = isoDate(mon);
+        btn.addEventListener('click', ()=>{
+          const a = state.colleghi.find(c=>c.id===selA.value);
+          const b = state.colleghi.find(c=>c.id===selB.value);
+          if(!a||!b){ toast('Seleziona', 'Scegli entrambi i colleghi.'); return; }
+          if(a.id===b.id){ toast('Errore', 'Seleziona due colleghi diversi.'); return; }
+          const startISO = weekInp.value;
+          if(!startISO){ toast('Seleziona', 'Scegli una settimana.'); return; }
+          const start = parseISODate(startISO);
+          const monStart = addDays(start, -((start.getDay()+6)%7));
+          let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+          html += '<thead><tr><th style="padding:8px 6px;text-align:left;border-bottom:2px solid var(--stroke);font-size:11px;">Giorno</th>';
+          html += '<th style="padding:8px 6px;text-align:center;border-bottom:2px solid var(--stroke);font-size:11px;">'+escapeHtml(a.name)+'</th>';
+          html += '<th style="padding:8px 6px;text-align:center;border-bottom:2px solid var(--stroke);font-size:11px;">'+escapeHtml(b.name)+'</th></tr></thead><tbody>';
+          const todayISO = isoDate(new Date());
+          for(let i=0;i<7;i++){
+            const d = addDays(monStart, i);
+            const iso = isoDate(d);
+            const dayA = getScheduleOnDate(a, iso);
+            const dayB = getScheduleOnDate(b, iso);
+            const isToday = iso === todayISO;
+            const bg = isToday ? 'background:#f0f7ff;' : (i%2===1?'background:var(--table-zebra);':'');
+            const fmtShift = day => {
+              if(!day) return '—';
+              if(day.isRest) return '<span style="color:var(--danger);font-weight:800;">LIBERO</span>';
+              if(day.isHoliday) return '<span style="color:var(--danger);font-weight:700;">'+day.start+'–'+day.end+'</span>';
+              return '<span style="font-weight:800;">'+day.start+'</span> – '+day.end;
+            };
+            const match = dayA && dayB && !dayA.isRest && !dayB.isRest && dayA.start===dayB.start;
+            html += '<tr style="'+bg+'">';
+            html += '<td style="padding:8px 6px;border-bottom:1px solid var(--stroke);font-weight:700;">'+DAYS[i]+' <span style="font-weight:400;color:var(--muted);">'+fmtDayMonth(d)+'</span></td>';
+            html += '<td style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--stroke);">'+fmtShift(dayA)+'</td>';
+            html += '<td style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--stroke);">'+fmtShift(dayB)+(match?' <i class="fa-solid fa-equals" style="color:var(--ok);font-size:10px;margin-left:4px;" title="Stesso turno"></i>':'')+'</td>';
+            html += '</tr>';
+          }
+          html += '</tbody></table>';
+          result.innerHTML = html;
+          result.style.display = '';
+        });
+      })();
 
       // Calendario inline settimana
       initInlineCal();
@@ -6503,6 +6762,16 @@ function buildHolidayMapForYear(year){
       if(importInput.files[0]) importData(importInput.files[0]);
       importInput.value = '';
     });
+    const sheetShareLink = document.getElementById('sheetShareLink');
+    if(sheetShareLink) sheetShareLink.addEventListener('click', ()=>{
+      if(!state.generated){ toast('Genera prima', 'Genera la matrice per condividere il link.'); }
+      else {
+        const url = getShareUrl();
+        navigator.clipboard.writeText(url).then(()=> toast('Link copiato!', 'Incollalo in chat per condividere la tua matrice.')).catch(()=> toast('Link', url));
+      }
+      document.getElementById('mobileToolsSheet').classList.remove('open');
+      document.getElementById('mobileToolsOverlay').classList.remove('open');
+    });
 
     // ===== CARD ANIMATIONS =====
     const observer = new MutationObserver(mutations => {
@@ -6520,6 +6789,37 @@ function buildHolidayMapForYear(year){
     document.querySelectorAll('.card[id]').forEach(card => {
       observer.observe(card, { attributes: true, attributeFilter: ['style'] });
     });
+
+    // Daily Telegram reminder: se l'utente ha collegato il proprio profilo via Telegram,
+    // alle 20:00 (o quando apre l'app dopo le 20:00) inviamo "Domani: <turno>" al suo chat.
+    // Eseguito client-side per non richiedere Firebase Admin sul server.
+    (async function dailyTelegramPush(){
+      try{
+        const profileId = safeStorageGet('quickProfileId');
+        if(!profileId) return;
+        const todayKey = isoDate(new Date());
+        const lastSent = safeStorageGet('tgLastPushDay');
+        if(lastSent === todayKey) return;
+        if(new Date().getHours() < 18) return;
+        const info = await fetch('/api/telegram/info').then(r=>r.json());
+        if(!info.enabled) return;
+        const links = await fetch('/api/telegram/links').then(r=>r.json());
+        if(!links[profileId]) return;
+        const c = state.colleghi.find(x=>x.id===profileId);
+        if(!c) return;
+        const tomorrow = isoDate(addDays(new Date(), 1));
+        const day = getScheduleOnDate(c, tomorrow);
+        let text;
+        if(!day) text = '📅 Domani: nessun turno configurato.';
+        else if(day.isRest) text = '🔴 Domani '+day.dayName+' '+fmtDayMonth(day.dateObj)+': <b>LIBERO</b>'+(day.holidayName?' · '+day.holidayName:'');
+        else text = '⏰ Domani '+day.dayName+' '+fmtDayMonth(day.dateObj)+': <b>'+day.start+' – '+day.end+'</b>'+(day.holidayName?' · '+day.holidayName:'')+(day.isRientro?' · Rientro in sede':'');
+        const resp = await fetch('/api/telegram/send', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ code: profileId, text })
+        });
+        if(resp.ok) safeStorageSet('tgLastPushDay', todayKey);
+      } catch(e){ console.warn('tg push failed', e); }
+    })();
 
     if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
   </script>
