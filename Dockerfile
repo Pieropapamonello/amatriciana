@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY server.js .
 COPY index.html public/index.html
+COPY style.css public/style.css
 COPY manifest.json public/manifest.json
 COPY sw.js public/sw.js
 

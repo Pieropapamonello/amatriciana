@@ -92,7 +92,55 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/api/gemini-key' && req.method === 'GET') {
     const key = process.env.GEMINI_KEY || '';
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ key }));
+    return res.end(JSON.stringify({ enabled: !!key }));
+  }
+
+  if (req.url === '/api/gemini-vision' && req.method === 'POST') {
+    const key = process.env.GEMINI_KEY || '';
+    if (!key) { res.writeHead(503); return res.end(JSON.stringify({ error: 'Gemini key non configurata' })); }
+    const body = await readBody(req);
+    if (!body.imageBase64 || !body.role) { res.writeHead(400); return res.end(JSON.stringify({ error: 'imageBase64 + role richiesti' })); }
+    const prompt = `Sei un OCR specializzato in turni di lavoro. Nell'immagine c'è una settimana lavorativa con date e orari di inizio turno.
+Estrai:
+1. Le 7 date della settimana (numero del giorno, da 1 a 31)
+2. Per ogni giorno, l'orario di inizio turno in formato HH:MM (oppure "RIPOSO" se è giorno libero, o "00:00" se è una colonna lavorativa con orario 0)
+Ruolo operatore: ${body.role}.
+Rispondi SOLO con JSON valido in questo formato esatto, senza testo aggiuntivo:
+{"giorni": [{"data": 15, "inizio": "08:00"}, {"data": 16, "inizio": "RIPOSO"}, ...], "weekLabel": "15-21 Mar 2026"}`;
+    const payload = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: body.mimeType || 'image/jpeg', data: body.imageBase64 } }
+        ]
+      }],
+      generationConfig: { temperature: 0.1, responseMimeType: 'application/json' }
+    };
+    const data = JSON.stringify(payload);
+    const apiReq = https.request({
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
+    }, apiRes => {
+      const chunks = [];
+      apiRes.on('data', c => chunks.push(c));
+      apiRes.on('end', () => {
+        const text = Buffer.concat(chunks).toString();
+        try {
+          const json = JSON.parse(text);
+          const out = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(out || JSON.stringify({ error: 'no response' }));
+        } catch (e) {
+          res.writeHead(500); res.end(JSON.stringify({ error: 'parse error', raw: text }));
+        }
+      });
+    });
+    apiReq.on('error', e => { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); });
+    apiReq.write(data);
+    apiReq.end();
+    return;
   }
 
   if (req.url === '/api/telegram/info' && req.method === 'GET') {
