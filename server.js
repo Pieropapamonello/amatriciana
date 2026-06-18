@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const PORT = 7860;
+const PORT = Number(process.env.PORT) || 7860;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
 const LINKS_FILE = '/tmp/tg-links.json';
