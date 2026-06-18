@@ -255,15 +255,22 @@
     <main class="grid">
       <!-- Guest landing: visibile solo se non admin e nessun profilo caricato -->
       <div class="card guest-card" id="guestCard" style="display:none;">
-        <div style="padding:32px 24px;text-align:center;">
-          <div style="width:64px;height:64px;margin:0 auto 14px;background:linear-gradient(135deg,#0066cc,#004a99);border-radius:14px;display:grid;place-items:center;">
-            <svg viewBox="0 0 32 32" width="32" height="32" style="fill:#fff;"><path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/></svg>
+        <div style="padding:36px 24px 32px;text-align:center;">
+          <div style="width:80px;height:80px;margin:0 auto 18px;background:linear-gradient(135deg,#0066cc,#004a99);border-radius:18px;display:grid;place-items:center;box-shadow:0 12px 32px rgba(0,102,204,0.30);">
+            <svg viewBox="0 0 32 32" width="40" height="40" style="fill:#fff;"><path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/></svg>
           </div>
-          <div style="font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px;">Benvenuto in Matrice Orari</div>
-          <div style="font-size:14px;color:var(--muted);font-weight:600;margin-bottom:22px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.5;">
-            Seleziona il tuo nome qui sotto per visualizzare i tuoi turni. Le matrici vengono create dall'amministratore.
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px;">Benvenuto</div>
+          <div style="font-size:15px;color:var(--muted);font-weight:600;margin-bottom:26px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.55;">
+            Per ricevere la <strong style="color:var(--text);">tua matrice turni</strong> richiedila all'amministratore tramite il nostro <strong style="color:var(--text);">bot Telegram</strong>. Bastano pochi passi guidati.
           </div>
-          <div style="max-width:340px;margin:0 auto;">
+          <a id="guestTgRequestBtn" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;background:linear-gradient(135deg,#229ED9,#1c8bb8);color:#fff;text-decoration:none;border-radius:10px;font-weight:800;font-size:15px;box-shadow:0 8px 24px rgba(34,158,217,0.30);transition:transform .15s,box-shadow .2s;">
+            <i class="fa-brands fa-telegram" style="font-size:22px;"></i>
+            Richiedi la mia matrice
+          </a>
+          <div style="margin-top:18px;font-size:12px;color:var(--muted);">
+            Già hai una matrice? <a href="#" id="guestExistingLink" style="color:var(--accent);font-weight:700;text-decoration:none;">Seleziona il tuo nome</a>
+          </div>
+          <div id="guestSelectorWrap" style="display:none;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;">
             <select class="select-like" id="guestProfileSelect" style="width:100%;font-size:14px;padding:11px 14px;" aria-label="Seleziona il tuo profilo">
               <option value="">— Seleziona il tuo nome —</option>
             </select>
@@ -2191,6 +2198,32 @@ function buildHolidayMapForYear(year){
     }
 
     function bindGuestSelector(){
+      // Bot Telegram link
+      const tgBtn = document.getElementById('guestTgRequestBtn');
+      if(tgBtn && !tgBtn._bound){
+        tgBtn._bound = true;
+        tgBtn.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          try{
+            const info = await fetch('/api/telegram/info').then(r=>r.json());
+            if(!info.enabled || !info.botUsername){
+              toast('Bot non disponibile', "L'amministratore deve configurare il bot Telegram.", 'warning');
+              return;
+            }
+            window.open('https://t.me/'+info.botUsername+'?start=richiesta', '_blank');
+          } catch(err){ toast('Errore', 'Impossibile contattare il server.', 'error'); }
+        });
+      }
+      // Toggle "Già hai una matrice"
+      const existing = document.getElementById('guestExistingLink');
+      const wrap = document.getElementById('guestSelectorWrap');
+      if(existing && wrap && !existing._bound){
+        existing._bound = true;
+        existing.addEventListener('click', (e)=>{
+          e.preventDefault();
+          wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+        });
+      }
       const sel = document.getElementById('guestProfileSelect');
       if(!sel || sel._bound) return;
       sel._bound = true;

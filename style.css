@@ -1310,6 +1310,36 @@
       box-shadow: none !important;
       background: transparent !important;
     }
+    /* Fix: il calendario nello share mode deve usare tutta la larghezza disponibile */
+    body.share-mode #colleagueMatrixBody{
+      padding: 14px 14px 24px !important;
+      overflow-x: hidden;
+    }
+    body.share-mode #colleagueMatrixBody .cal-grid{
+      grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+      width: 100%;
+    }
+    body.share-mode #colleagueMatrixBody .cal-cell,
+    body.share-mode #colleagueMatrixBody .cal-dow{
+      min-width: 0;
+      overflow: hidden;
+    }
+    body.share-mode #colleagueMatrixBody .cal-month{
+      max-width: 100%;
+      width: 100%;
+    }
+    @media (max-width: 480px){
+      body.share-mode #colleagueMatrixBody .cal-cell{
+        padding: 4px 2px !important;
+        min-height: 56px;
+        font-size: 10px;
+      }
+      body.share-mode #colleagueMatrixBody .cal-time{ font-size: 11px; }
+      body.share-mode #colleagueMatrixBody .cal-time-end{ font-size: 9px; }
+      body.share-mode #colleagueMatrixBody .cal-libero{ font-size: 9px; }
+      body.share-mode #colleagueMatrixBody .cal-day-num{ font-size: 10px; }
+      body.share-mode #colleagueMatrixBody .cal-rientro{ font-size: 7px; }
+    }
     .share-header{
       display: none;
       background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);

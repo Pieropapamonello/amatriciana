@@ -8,6 +8,8 @@ const PORT = Number(process.env.PORT) || 7860;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
 const LINKS_FILE = '/tmp/tg-links.json';
+const SESSIONS_FILE = '/tmp/tg-sessions.json';
+const REQUESTS_FILE = '/tmp/tg-requests.json';
 
 const MIME = {
   '.html': 'text/html',
@@ -37,6 +39,22 @@ function loadLinks() {
 function saveLinks(obj) {
   try { fs.writeFileSync(LINKS_FILE, JSON.stringify(obj)); } catch (e) { console.warn('save links failed', e); }
 }
+function loadSessions() {
+  try { return JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8')); } catch { return {}; }
+}
+function saveSessions(obj) {
+  try { fs.writeFileSync(SESSIONS_FILE, JSON.stringify(obj)); } catch (e) { console.warn('save sessions failed', e); }
+}
+function loadRequests() {
+  try { return JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch { return []; }
+}
+function saveRequests(arr) {
+  try { fs.writeFileSync(REQUESTS_FILE, JSON.stringify(arr)); } catch (e) { console.warn('save requests failed', e); }
+}
+function getAdminChatId() {
+  const links = loadLinks();
+  return links['__admin__'] ? links['__admin__'].chatId : null;
+}
 
 function tgRequest(method, payload) {
   if (!TG_TOKEN) return Promise.reject(new Error('No Telegram token'));
@@ -59,6 +77,229 @@ function tgRequest(method, payload) {
     req.write(data);
     req.end();
   });
+}
+
+// ===== TELEGRAM BOT CONVERSATION =====
+const ADMIN_TG_PASS = process.env.ADMIN_PASS || '';
+
+async function tgSend(chatId, text, extra) {
+  return tgRequest('sendMessage', Object.assign({ chat_id: chatId, text, parse_mode: 'HTML' }, extra || {}));
+}
+async function tgForwardPhoto(adminChatId, fileId, caption) {
+  return tgRequest('sendPhoto', { chat_id: adminChatId, photo: fileId, caption: caption || '', parse_mode: 'HTML' });
+}
+function mainMenuKeyboard() {
+  return {
+    reply_markup: {
+      keyboard: [
+        [{ text: '📋 Richiedi la mia matrice' }],
+        [{ text: 'ℹ️ Aiuto' }, { text: '❌ Annulla' }]
+      ],
+      resize_keyboard: true,
+    }
+  };
+}
+function cancelKeyboard() {
+  return { reply_markup: { keyboard: [[{ text: '❌ Annulla' }]], resize_keyboard: true } };
+}
+function removeKeyboard() {
+  return { reply_markup: { remove_keyboard: true } };
+}
+
+async function handleTelegramUpdate(update) {
+  const msg = update.message;
+  if (!msg) return;
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const userName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' ') || msg.from.username || ('user' + userId);
+  const text = (msg.text || '').trim();
+  const sessions = loadSessions();
+  const sessionKey = String(chatId);
+  const session = sessions[sessionKey] || { step: 'idle' };
+
+  // /admin <password> — registra questo chat come admin
+  if (text.startsWith('/admin ')) {
+    const pass = text.substring(7).trim();
+    if (ADMIN_TG_PASS && pass === ADMIN_TG_PASS) {
+      const links = loadLinks();
+      links['__admin__'] = { chatId, linkedAt: new Date().toISOString(), name: userName };
+      saveLinks(links);
+      await tgSend(chatId, '✅ Sei registrato come amministratore.\nRiceverai qui tutte le richieste di matrici degli utenti.');
+    } else {
+      await tgSend(chatId, '❌ Password admin errata.');
+    }
+    return;
+  }
+
+  // /start con codice (collegamento profilo dall'app)
+  if (text.startsWith('/start ')) {
+    const code = text.substring(7).trim();
+    const links = loadLinks();
+    links[code] = { chatId, linkedAt: new Date().toISOString(), name: userName };
+    saveLinks(links);
+    await tgSend(chatId, '✅ <b>Collegato!</b>\nRiceverai ogni sera il tuo turno del giorno dopo.', mainMenuKeyboard());
+    return;
+  }
+
+  // /start senza codice o /menu
+  if (text === '/start' || text === '/menu' || text === 'ℹ️ Aiuto' || text === '/help') {
+    await tgSend(chatId,
+      '👋 <b>Benvenuto in Matrice Orari Bot</b>\n\n' +
+      'Comandi disponibili:\n' +
+      '📋 <b>Richiedi la mia matrice</b> — chiedi all\'amministratore di crearti la matrice turni\n' +
+      'ℹ️ <b>Aiuto</b> — mostra questo messaggio\n' +
+      '❌ <b>Annulla</b> — interrompi una richiesta in corso',
+      mainMenuKeyboard()
+    );
+    return;
+  }
+
+  // Annulla
+  if (text === '❌ Annulla' || text === '/annulla' || text === '/cancel') {
+    delete sessions[sessionKey];
+    saveSessions(sessions);
+    await tgSend(chatId, '❌ Operazione annullata.', mainMenuKeyboard());
+    return;
+  }
+
+  // Inizio richiesta
+  if (text === '📋 Richiedi la mia matrice' || text === '/richiesta') {
+    sessions[sessionKey] = { step: 'nome', data: { telegramName: userName, userId } };
+    saveSessions(sessions);
+    await tgSend(chatId,
+      '📝 <b>Richiesta nuova matrice</b>\n\nQual è il tuo <b>nome e cognome completo</b>?\n(es. Mario Rossi)',
+      cancelKeyboard()
+    );
+    return;
+  }
+
+  // State machine
+  if (session.step === 'nome' && text) {
+    if (text.length < 3) { await tgSend(chatId, '⚠️ Nome troppo corto. Riprova:', cancelKeyboard()); return; }
+    session.data.nome = text;
+    session.step = 'ruolo';
+    sessions[sessionKey] = session; saveSessions(sessions);
+    await tgSend(chatId, '👔 Sei <b>Dipendente</b> o <b>Tutor</b>?', {
+      reply_markup: { keyboard: [[{ text: 'Dipendente' }, { text: 'Tutor' }], [{ text: '❌ Annulla' }]], resize_keyboard: true }
+    });
+    return;
+  }
+
+  if (session.step === 'ruolo' && text) {
+    const r = text.toLowerCase();
+    if (r !== 'dipendente' && r !== 'tutor') { await tgSend(chatId, '⚠️ Scegli "Dipendente" o "Tutor":'); return; }
+    session.data.ruolo = r;
+    session.step = 'team';
+    sessions[sessionKey] = session; saveSessions(sessions);
+    await tgSend(chatId, '🏷 Qual è il tuo <b>team</b>? (numero da 1 a 9)', cancelKeyboard());
+    return;
+  }
+
+  if (session.step === 'team' && text) {
+    const t = parseInt(text, 10);
+    if (!Number.isFinite(t) || t < 1 || t > 9) { await tgSend(chatId, '⚠️ Inserisci un numero da 1 a 9:'); return; }
+    session.data.team = t;
+    session.step = 'rientro';
+    sessions[sessionKey] = session; saveSessions(sessions);
+    await tgSend(chatId, '🏢 Qual è la <b>settimana del rientro in sede</b>?\n(es. <i>23-29 marzo 2026</i> oppure <i>nessun rientro</i>)', cancelKeyboard());
+    return;
+  }
+
+  if (session.step === 'rientro' && text) {
+    session.data.rientro = text;
+    session.step = 'foto1';
+    session.data.photos = [];
+    sessions[sessionKey] = session; saveSessions(sessions);
+    await tgSend(chatId,
+      '📸 Ora invia il <b>primo screenshot</b> con i tuoi orari della <b>settimana scorsa</b>.\n\n⚠️ Importante: deve essere <b>senza cambi</b> di turno.',
+      cancelKeyboard()
+    );
+    return;
+  }
+
+  if (session.step === 'foto1') {
+    if (!msg.photo || !msg.photo.length) {
+      await tgSend(chatId, '⚠️ Invia uno <b>screenshot</b> (foto), non testo:');
+      return;
+    }
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    session.data.photos.push(fileId);
+    session.step = 'foto2';
+    sessions[sessionKey] = session; saveSessions(sessions);
+    await tgSend(chatId, '✅ Primo screenshot ricevuto.\n\n📸 Ora invia il <b>secondo screenshot</b> con gli orari della <b>settimana corrente</b>.', cancelKeyboard());
+    return;
+  }
+
+  if (session.step === 'foto2') {
+    if (!msg.photo || !msg.photo.length) {
+      await tgSend(chatId, '⚠️ Invia uno <b>screenshot</b> (foto), non testo:');
+      return;
+    }
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    session.data.photos.push(fileId);
+
+    // Salva richiesta
+    const requests = loadRequests();
+    const requestId = Date.now().toString(36);
+    const request = {
+      id: requestId,
+      createdAt: new Date().toISOString(),
+      from: { chatId, userId, telegramName: userName },
+      nome: session.data.nome,
+      ruolo: session.data.ruolo,
+      team: session.data.team,
+      rientro: session.data.rientro,
+      photos: session.data.photos,
+      status: 'pending'
+    };
+    requests.push(request);
+    saveRequests(requests);
+
+    // Conferma all'utente
+    delete sessions[sessionKey];
+    saveSessions(sessions);
+    await tgSend(chatId,
+      '✅ <b>Richiesta inviata!</b>\n\n' +
+      'Riepilogo:\n' +
+      `• Nome: <b>${escapeHtml(request.nome)}</b>\n` +
+      `• Ruolo: <b>${request.ruolo}</b>\n` +
+      `• Team: <b>${request.team}</b>\n` +
+      `• Rientro: <b>${escapeHtml(request.rientro)}</b>\n\n` +
+      "L'amministratore ti contatterà appena la matrice sarà pronta. Riceverai poi le notifiche turno quotidiane.",
+      mainMenuKeyboard()
+    );
+
+    // Inoltra all'admin
+    const adminChatId = getAdminChatId();
+    if (adminChatId) {
+      const summary =
+        '📬 <b>Nuova richiesta matrice</b>\n\n' +
+        `👤 Telegram: <b>${escapeHtml(userName)}</b> (chat <code>${chatId}</code>)\n` +
+        `📝 Nome: <b>${escapeHtml(request.nome)}</b>\n` +
+        `👔 Ruolo: <b>${request.ruolo}</b>\n` +
+        `🏷 Team: <b>${request.team}</b>\n` +
+        `🏢 Rientro: <b>${escapeHtml(request.rientro)}</b>\n` +
+        `🆔 Richiesta: <code>${requestId}</code>\n\n` +
+        '📸 Screenshot in arrivo...';
+      try { await tgSend(adminChatId, summary); } catch (e) { console.warn('forward to admin failed', e.message); }
+      for (let i = 0; i < request.photos.length; i++) {
+        try { await tgForwardPhoto(adminChatId, request.photos[i], `Settimana ${i+1} di 2 — ${escapeHtml(request.nome)}`); } catch (e) { console.warn('forward photo', i, e.message); }
+      }
+    } else {
+      console.warn('No admin chat registered — request', requestId, 'saved but not forwarded');
+    }
+    return;
+  }
+
+  // Default: messaggio generico
+  await tgSend(chatId,
+    "Non ho capito. Premi <b>📋 Richiedi la mia matrice</b> per iniziare oppure <b>ℹ️ Aiuto</b>.",
+    mainMenuKeyboard()
+  );
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 const server = http.createServer(async (req, res) => {
@@ -156,29 +397,15 @@ Rispondi SOLO con JSON valido in questo formato esatto, senza testo aggiuntivo:
   if (req.url === '/api/telegram/webhook' && req.method === 'POST') {
     const update = await readBody(req);
     try {
-      const msg = update.message;
-      if (msg && msg.text && msg.text.startsWith('/start')) {
-        const parts = msg.text.split(' ');
-        const code = parts[1] || '';
-        const chatId = msg.chat.id;
-        if (code) {
-          const links = loadLinks();
-          links[code] = { chatId, linkedAt: new Date().toISOString(), name: msg.from.first_name || '' };
-          saveLinks(links);
-          await tgRequest('sendMessage', {
-            chat_id: chatId,
-            text: '✅ Collegato! Riceverai ogni sera il tuo turno del giorno dopo.',
-          });
-        } else {
-          await tgRequest('sendMessage', {
-            chat_id: chatId,
-            text: '👋 Benvenuto in Matrice Orari Bot. Usa il link dall\'app per collegare il tuo profilo.',
-          });
-        }
-      }
+      await handleTelegramUpdate(update);
     } catch (e) { console.warn('webhook error', e); }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end('{}');
+  }
+
+  if (req.url === '/api/telegram/requests' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify(loadRequests()));
   }
 
   if (req.url === '/api/telegram/send' && req.method === 'POST') {
