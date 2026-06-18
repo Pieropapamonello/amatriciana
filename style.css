@@ -968,6 +968,73 @@
       position:absolute; top:-100px; left:16px; background:#0066cc; color:#fff; padding:8px 16px; border-radius:4px; z-index:99999; font-weight:700; font-size:14px;
     }
     .skip-link:focus{ top: 8px; }
+
+    /* ===== SHARE-ONLY MODE ===== */
+    /* Quando il link contiene #share=, mostra solo la matrice del collega */
+    body.share-mode .topbar,
+    body.share-mode .desktop-sidebar,
+    body.share-mode .skip-link,
+    body.share-mode #todayCard,
+    body.share-mode .card:not(#colleagueMatrixCardView),
+    body.share-mode .mobile-tools-sheet,
+    body.share-mode .mobile-tools-overlay,
+    body.share-mode #colleagueMatrixModal .icon-btn:not(#saveCollegueMatrixBtn):not(#exportIcsBtn):not(#toggleCalBtn):not(#toggleCardsBtn):not(#toggleTblBtn):not(#colleagueYearPrev):not(#colleagueYearNext){
+      display: none !important;
+    }
+    body.share-mode #closeColleagueMatrixModal{ display: none !important; }
+    body.share-mode #permaLinkBtn{ display: none !important; }
+    body.share-mode .app-shell{ padding-top: 0 !important; padding-left: 0 !important; }
+    body.share-mode{ padding: 0; background: var(--bg-mid); }
+    body.share-mode #colleagueMatrixModal{
+      position: static !important;
+      display: block !important;
+      background: transparent !important;
+      padding: 0 !important;
+      inset: auto !important;
+    }
+    body.share-mode #colleagueMatrixModal .modal-sheet{
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+    .share-header{
+      display: none;
+      background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
+      color: #fff;
+      padding: 20px 24px calc(env(safe-area-inset-top) + 20px);
+      padding-top: calc(env(safe-area-inset-top) + 20px);
+    }
+    body.share-mode .share-header{ display: block; }
+    .share-header-inner{
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    .share-header-brand{
+      display: flex; align-items: center; gap: 12px;
+    }
+    .share-header-logo{
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 18px;
+    }
+    .share-header-text{ min-width: 0; }
+    .share-header-title{ font-size: 18px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.1; }
+    .share-header-sub{ font-size: 12px; color: rgba(255,255,255,0.75); font-weight: 600; margin-top: 2px; }
+    .share-footer{
+      display: none;
+      padding: 14px 24px 28px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    body.share-mode .share-footer{ display: block; }
+    .share-footer a{ color: var(--accent); text-decoration: none; font-weight: 700; }
     .ok-btn:disabled{filter: grayscale(0.2); opacity: 0.55;}
     .row-actions .icon-btn{
       width: 52px;
@@ -1528,7 +1595,9 @@
 
     /* Hero "Il mio turno oggi" — card prominente, mostra a colpo d'occhio */
     .today-card{
-      position: relative;
+      position: sticky;
+      top: calc(env(safe-area-inset-top) + 70px);
+      z-index: 50;
       background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
       color: #fff;
       border: none;
@@ -1539,10 +1608,24 @@
       align-items: center;
       gap: 20px;
       cursor: pointer;
-      transition: transform .15s, box-shadow .2s;
+      transition: padding .25s, box-shadow .25s, transform .15s;
       box-shadow: 0 8px 24px rgba(0,102,204,0.20);
       overflow: hidden;
     }
+    .today-card.is-compact{
+      padding: 12px 20px;
+      box-shadow: 0 4px 16px rgba(0,102,204,0.25);
+    }
+    .today-card.is-compact .today-card-time{
+      font-size: 22px;
+      letter-spacing: -0.5px;
+    }
+    .today-card.is-compact .today-card-time.is-rest{ font-size: 18px; }
+    .today-card.is-compact .today-card-sub{ display: none; }
+    .today-card.is-compact .today-card-countdown{ padding: 6px 12px; min-width: 0; }
+    .today-card.is-compact .today-card-countdown-value{ font-size: 14px; }
+    .today-card.is-compact .today-card-countdown-label{ font-size: 9px; margin-top: 2px; }
+    .today-card.is-compact::before{ display: none; }
     .today-card::before{
       content: '';
       position: absolute; top: -30%; right: -10%;

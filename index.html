@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230066cc'/><path d='M5 8h22v3H5zM5 15h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z' fill='white'/></svg>" />
   <title>Matrice Orari</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +20,23 @@
 
 <body>
   <a href="#previewCard" class="skip-link">Vai alla matrice</a>
+
+  <!-- Header per modalità condivisione (mostrato solo se URL contiene #share=) -->
+  <header class="share-header" id="shareHeader">
+    <div class="share-header-inner">
+      <div class="share-header-brand">
+        <div class="share-header-logo">
+          <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" style="fill:#fff;">
+            <path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/>
+          </svg>
+        </div>
+        <div class="share-header-text">
+          <div class="share-header-title" id="shareTitle">Matrice Orari</div>
+          <div class="share-header-sub" id="shareSub">Turni condivisi</div>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <!-- Sidebar desktop (visibile da 900px in su) -->
   <aside class="desktop-sidebar" id="desktopSidebar" aria-label="Strumenti">
@@ -44,7 +62,9 @@
     <header class="topbar">
       <div class="brand">
         <button class="icon-btn locked brand-icon-btn" id="adminLockBtn" type="button" aria-label="Accedi come admin" title="Accedi come admin">
-          <i class="fa-solid fa-calendar-days"></i>
+          <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true" style="fill:currentColor;">
+            <path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/>
+          </svg>
         </button>
         <div class="brand-text">
           <h1>Matrice Orari</h1>
@@ -543,6 +563,9 @@
       </section>
 
     </main>
+    <footer class="share-footer">
+      Powered by <a href="/" target="_blank" rel="noopener">Matrice Orari</a> · Link permanente · Sola lettura
+    </footer>
   </div>
 
   <!-- Modals -->
@@ -1552,7 +1575,91 @@ function buildHolidayMapForYear(year){
         html += '</div></div>';
       }
 
-      html += '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">Ore per mese</div>';
+      // Calendar heatmap (anno corrente)
+      const now2 = new Date();
+      const curYear = now2.getFullYear();
+      const dayMap = new Map();
+      weeks.forEach(w=>{
+        w.days.forEach(d=>{
+          if(d.dateObj.getFullYear() !== curYear) return;
+          const key = isoDate(d.dateObj);
+          if(d.isRest) dayMap.set(key, {v:0, isRest:true});
+          else dayMap.set(key, {v: state.durationMinutes ? state.durationMinutes/60 : 8, isHoliday: d.isHoliday, isRientro: d.isRientro, start: d.start, end: d.end});
+        });
+      });
+      const yearStart = new Date(curYear, 0, 1);
+      const startDow = (yearStart.getDay() + 6) % 7;
+      const yearEnd = new Date(curYear, 11, 31);
+      const totalDays = Math.ceil((yearEnd - yearStart) / 86400000) + 1;
+      const weekCount = Math.ceil((startDow + totalDays) / 7);
+      const monthsLabels = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      const todayKey = isoDate(now2);
+
+      html += `<div style="font-size:13px;font-weight:700;margin-bottom:10px;margin-top:18px;">Heatmap ${curYear}</div>`;
+      html += `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;">`;
+      html += `<div style="display:inline-block;">`;
+      // Month labels row
+      html += `<div style="display:grid;grid-template-columns:24px repeat(${weekCount},12px);gap:2px;margin-bottom:4px;font-size:9px;color:var(--muted);font-weight:700;"><div></div>`;
+      const seenMonths = new Set();
+      for(let w=0; w<weekCount; w++){
+        const firstDayOfWeek = new Date(yearStart);
+        firstDayOfWeek.setDate(firstDayOfWeek.getDate() + w*7 - startDow);
+        const mo = firstDayOfWeek.getMonth();
+        if(firstDayOfWeek.getFullYear() === curYear && !seenMonths.has(mo) && firstDayOfWeek.getDate() <= 7){
+          seenMonths.add(mo);
+          html += `<div style="grid-column:span 1;">${monthsLabels[mo]}</div>`;
+        } else html += '<div></div>';
+      }
+      html += '</div>';
+      // Day labels + cells
+      const dowLabels = ['L','M','M','G','V','S','D'];
+      for(let d=0; d<7; d++){
+        html += `<div style="display:grid;grid-template-columns:24px repeat(${weekCount},12px);gap:2px;margin-bottom:2px;">`;
+        html += `<div style="font-size:9px;color:var(--muted);font-weight:700;display:flex;align-items:center;">${d%2===0?dowLabels[d]:''}</div>`;
+        for(let w=0; w<weekCount; w++){
+          const dayOffset = w*7 + d - startDow;
+          const cellDate = new Date(yearStart);
+          cellDate.setDate(cellDate.getDate() + dayOffset);
+          if(cellDate.getFullYear() !== curYear || dayOffset < 0){
+            html += `<div style="width:12px;height:12px;"></div>`;
+            continue;
+          }
+          const key = isoDate(cellDate);
+          const data = dayMap.get(key);
+          let color = '#ebeef2';
+          let title = key;
+          if(data){
+            if(data.isRest){ color = '#fee2e2'; title += ' · Riposo'; }
+            else {
+              const h = data.v;
+              if(h >= 10) color = '#0a3d75';
+              else if(h >= 8) color = '#0066cc';
+              else if(h >= 6) color = '#4d9aed';
+              else if(h >= 4) color = '#9fc4f0';
+              else color = '#cfdcef';
+              title += ` · ${data.start}–${data.end}`;
+              if(data.isHoliday) title += ' · Festivo';
+              if(data.isRientro) title += ' · Rientro';
+            }
+          }
+          const border = key === todayKey ? 'box-shadow:0 0 0 2px var(--accent);' : '';
+          html += `<div title="${title}" style="width:12px;height:12px;background:${color};border-radius:2px;${border}"></div>`;
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+      html += `<div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);margin-top:6px;justify-content:flex-end;">
+        Meno
+        <div style="width:12px;height:12px;background:#ebeef2;border-radius:2px;"></div>
+        <div style="width:12px;height:12px;background:#cfdcef;border-radius:2px;"></div>
+        <div style="width:12px;height:12px;background:#9fc4f0;border-radius:2px;"></div>
+        <div style="width:12px;height:12px;background:#4d9aed;border-radius:2px;"></div>
+        <div style="width:12px;height:12px;background:#0066cc;border-radius:2px;"></div>
+        <div style="width:12px;height:12px;background:#0a3d75;border-radius:2px;"></div>
+        Più
+      </div>`;
+
+      html += '<div style="font-size:13px;font-weight:700;margin-bottom:10px;margin-top:18px;">Ore per mese</div>';
       html += '<div style="display:flex;flex-direction:column;gap:6px;">';
       monthValues.forEach(m=>{
         const h = Math.floor(m.totalMin/60), mm = m.totalMin%60;
@@ -5198,7 +5305,17 @@ function buildHolidayMapForYear(year){
             anchorPatternIndex: p.a !== undefined ? p.a : 0,
             team: p.t || null
           };
-          setTimeout(()=> openColleagueMatrix(c), 400);
+          // Attiva share-mode: nasconde admin/wizard, mostra solo matrice
+          document.body.classList.add('share-mode');
+          const titleEl = document.getElementById('shareTitle');
+          const subEl = document.getElementById('shareSub');
+          if(titleEl) titleEl.textContent = 'Turni di ' + c.name;
+          if(subEl){
+            const roleLbl = c.role === 'tutor' ? 'Tutor' : 'Dipendente';
+            subEl.textContent = roleLbl + (c.team ? ' · Team ' + c.team : '') + ' · ' + (c.durationKey || '');
+          }
+          document.title = 'Turni ' + c.name + ' · Matrice Orari';
+          setTimeout(()=> openColleagueMatrix(c), 200);
         } catch(e){
           console.warn('share link parse error', e);
           toast('Link non valido', 'Il link condiviso è corrotto o malformato.');
@@ -5286,6 +5403,22 @@ function buildHolidayMapForYear(year){
       }
     }
     setInterval(()=>{ if(state.generated && typeof updateTodayCard==='function') updateTodayCard(); }, 60000);
+
+    // Compress today card on scroll
+    (function(){
+      let ticking = false;
+      window.addEventListener('scroll', ()=>{
+        if(ticking) return;
+        ticking = true;
+        requestAnimationFrame(()=>{
+          const card = document.getElementById('todayCard');
+          if(card && card.style.display !== 'none'){
+            card.classList.toggle('is-compact', window.scrollY > 100);
+          }
+          ticking = false;
+        });
+      }, { passive: true });
+    })();
     updateTodayCard();
 
     // ===== DESKTOP SIDEBAR (proxy ai bottoni admin originali) =====
