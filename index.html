@@ -19,6 +19,27 @@
 
 <body>
   <a href="#previewCard" class="skip-link">Vai alla matrice</a>
+
+  <!-- Sidebar desktop (visibile da 900px in su) -->
+  <aside class="desktop-sidebar" id="desktopSidebar" aria-label="Strumenti">
+    <div class="ctrl" id="sidebarColleghi" style="display:none;">
+      <button class="icon-btn" type="button" aria-label="Colleghi" title="Colleghi"><i class="fa-solid fa-users"></i></button>
+      <span class="label">Colleghi</span>
+    </div>
+    <div class="ctrl" id="sidebarCerca" style="display:none;">
+      <button class="icon-btn" type="button" aria-label="Cerca" title="Cerca"><i class="fa-solid fa-magnifying-glass"></i></button>
+      <span class="label">Cerca</span>
+    </div>
+    <div class="ctrl" id="sidebarRientri" style="display:none;">
+      <button class="icon-btn" type="button" aria-label="Rientri" title="Rientri"><i class="fa-solid fa-building"></i></button>
+      <span class="label">Rientri</span>
+    </div>
+    <div class="ctrl" id="sidebarScan" style="display:none;">
+      <button class="icon-btn" type="button" aria-label="Scan" title="Scan"><i class="fa-solid fa-camera"></i></button>
+      <span class="label">Scan</span>
+    </div>
+  </aside>
+
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
@@ -128,13 +149,16 @@
     <input type="file" id="importFileInput" accept=".json" style="display:none;" />
 
     <main class="grid">
-      <!-- Il mio turno oggi -->
+      <!-- Hero: Il mio turno oggi -->
       <div id="todayCard" class="today-card" style="display:none;">
-        <div class="today-card-icon"><i class="fa-solid fa-clock"></i></div>
         <div class="today-card-info">
-          <div class="today-card-label">Il tuo turno oggi</div>
+          <div class="today-card-label" id="todayLabel">Il tuo turno oggi</div>
           <div class="today-card-time" id="todayTime">—</div>
           <div class="today-card-sub" id="todaySub"></div>
+        </div>
+        <div class="today-card-countdown" id="todayCountdown" style="display:none;">
+          <div class="today-card-countdown-value" id="todayCountdownValue">—</div>
+          <div class="today-card-countdown-label" id="todayCountdownLabel">inizia tra</div>
         </div>
       </div>
 
@@ -627,6 +651,9 @@
               <i class="fa-regular fa-calendar-check"></i>
             </button>
           </div>
+          <button class="icon-btn" id="permaLinkBtn" type="button" aria-label="Link permanente" title="Link permanente alla matrice">
+            <i class="fa-solid fa-link"></i>
+          </button>
           <button class="icon-btn" id="closeColleagueMatrixModal" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
@@ -1462,35 +1489,84 @@ function buildHolidayMapForYear(year){
       card.style.display = '';
       const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
       const byMonth = {};
+      let totalWork = 0, totalRest = 0, totalMin = 0, totalHoliday = 0;
+      const shiftDist = {morning:0, afternoon:0, evening:0, night:0};
       weeks.forEach(w=>{
         w.days.forEach(d=>{
           const key = d.dateObj.getFullYear()+'-'+String(d.dateObj.getMonth()).padStart(2,'0');
           if(!byMonth[key]) byMonth[key] = {label: MESI[d.dateObj.getMonth()]+' '+d.dateObj.getFullYear(), work:0, rest:0, holiday:0, totalMin:0, shifts:{}};
           const m = byMonth[key];
-          if(d.isRest) m.rest++;
+          if(d.isRest){ m.rest++; totalRest++; }
           else {
-            m.work++;
-            if(d.isHoliday) m.holiday++;
+            m.work++; totalWork++;
+            if(d.isHoliday){ m.holiday++; totalHoliday++; }
             m.totalMin += state.durationMinutes || 0;
+            totalMin += state.durationMinutes || 0;
             const t = d.start; m.shifts[t] = (m.shifts[t]||0)+1;
+            const h = parseInt(t.split(':')[0], 10);
+            if(h < 12) shiftDist.morning++;
+            else if(h < 17) shiftDist.afternoon++;
+            else if(h < 22) shiftDist.evening++;
+            else shiftDist.night++;
           }
         });
       });
-      let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
-      Object.values(byMonth).forEach(m=>{
-        const h = Math.floor(m.totalMin/60), mm = m.totalMin%60;
-        const topShift = Object.entries(m.shifts).sort((a,b)=>b[1]-a[1])[0];
-        html += '<div style="border:1px solid var(--stroke);border-radius:6px;padding:12px;">';
-        html += '<div style="font-weight:800;font-size:13px;margin-bottom:8px;">'+m.label+'</div>';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;">';
-        html += '<div><span style="color:var(--muted);">Lavoro</span><br><strong>'+m.work+' gg</strong></div>';
-        html += '<div><span style="color:var(--muted);">Riposi</span><br><strong style="color:var(--danger);">'+m.rest+' gg</strong></div>';
-        html += '<div><span style="color:var(--muted);">Ore totali</span><br><strong>'+h+'h'+(mm?' '+mm+'m':'')+'</strong></div>';
-        if(topShift) html += '<div><span style="color:var(--muted);">Turno freq.</span><br><strong>'+topShift[0]+' (×'+topShift[1]+')</strong></div>';
-        if(m.holiday) html += '<div><span style="color:var(--muted);">Festivi</span><br><strong>'+m.holiday+'</strong></div>';
-        html += '</div></div>';
+      const totH = Math.floor(totalMin/60), totM = totalMin%60;
+      const monthValues = Object.values(byMonth);
+      const maxMonthHours = Math.max(...monthValues.map(m => m.totalMin), 1);
+
+      let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;">';
+      [
+        ['Ore totali', totH+'h'+(totM?' '+totM+'m':''), 'var(--accent)', 'clock'],
+        ['Giorni lavoro', totalWork, 'var(--ok)', 'briefcase'],
+        ['Giorni riposo', totalRest, 'var(--danger)', 'bed'],
+        ['Festivi lavorati', totalHoliday, 'var(--warn)', 'star']
+      ].forEach(([l, v, c, ic])=>{
+        html += `<div style="border:1px solid var(--stroke);border-radius:8px;padding:14px;background:var(--ctrl-bg);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--muted);"><i class="fa-solid fa-${ic}" style="color:${c};margin-right:6px;"></i>${l}</div>
+          <div style="font-size:24px;font-weight:800;margin-top:6px;letter-spacing:-0.5px;">${v}</div>
+        </div>`;
       });
       html += '</div>';
+
+      const totalShifts = shiftDist.morning + shiftDist.afternoon + shiftDist.evening + shiftDist.night;
+      if(totalShifts > 0){
+        html += '<div style="margin-bottom:18px;">';
+        html += '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">Distribuzione turni</div>';
+        html += '<div style="display:flex;height:28px;border-radius:6px;overflow:hidden;border:1px solid var(--stroke);">';
+        const segs = [
+          {key:'morning', label:'Mattina', color:'#fbbf24'},
+          {key:'afternoon', label:'Pomeriggio', color:'#fb923c'},
+          {key:'evening', label:'Sera', color:'#a78bfa'},
+          {key:'night', label:'Notte', color:'#1e3a8a'}
+        ];
+        segs.forEach(s=>{
+          const pct = (shiftDist[s.key] / totalShifts) * 100;
+          if(pct > 0) html += `<div style="width:${pct}%;background:${s.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;" title="${s.label}: ${shiftDist[s.key]} (${pct.toFixed(0)}%)">${pct >= 8 ? Math.round(pct)+'%' : ''}</div>`;
+        });
+        html += '</div>';
+        html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted);">';
+        segs.forEach(s=>{
+          html += `<div><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:5px;vertical-align:middle;"></span>${s.label} (${shiftDist[s.key]})</div>`;
+        });
+        html += '</div></div>';
+      }
+
+      html += '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">Ore per mese</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      monthValues.forEach(m=>{
+        const h = Math.floor(m.totalMin/60), mm = m.totalMin%60;
+        const w = (m.totalMin / maxMonthHours) * 100;
+        html += `<div style="display:grid;grid-template-columns:80px 1fr 100px;gap:10px;align-items:center;font-size:12px;">
+          <div style="font-weight:700;color:var(--muted);">${m.label}</div>
+          <div style="height:18px;background:var(--ctrl-bg);border-radius:4px;overflow:hidden;">
+            <div style="width:${w}%;height:100%;background:linear-gradient(90deg,var(--accent),#3b9cff);transition:width .3s;"></div>
+          </div>
+          <div style="text-align:right;font-weight:700;">${h}h${mm?' '+mm+'m':''}<span style="color:var(--muted);font-weight:400;"> · ${m.work}gg</span></div>
+        </div>`;
+      });
+      html += '</div>';
+
       body.innerHTML = html;
     }
 
@@ -2536,14 +2612,47 @@ function buildHolidayMapForYear(year){
       const weeks = buildMatrixDataForConfig(yearCfg, yearWeekCount);
       const name = _viewedColleague.name || 'Collega';
       const safeName = name.toLowerCase().replace(/\s+/g,'-');
+      const dtstamp = (() => {
+        const d = new Date();
+        const p = n => String(n).padStart(2,'0');
+        return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+      })();
+      const fold = s => {
+        if(s.length <= 75) return s;
+        const out = [s.slice(0,75)];
+        let rest = s.slice(75);
+        while(rest.length > 74){ out.push(' ' + rest.slice(0,74)); rest = rest.slice(74); }
+        if(rest) out.push(' ' + rest);
+        return out.join('\r\n');
+      };
+      const escapeIcs = s => String(s).replace(/[\\;,]/g, c => '\\'+c).replace(/\n/g, '\\n');
       const lines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Matrice Visual//IT',
+        'PRODID:-//Matrice Orari//IT',
         'CALSCALE:GREGORIAN',
         'METHOD:PUBLISH',
-        `X-WR-CALNAME:Turni ${name} ${_colleagueViewYear}`,
+        fold(`X-WR-CALNAME:Turni ${name} ${_colleagueViewYear}`),
+        'X-WR-TIMEZONE:Europe/Rome',
+        'BEGIN:VTIMEZONE',
+        'TZID:Europe/Rome',
+        'BEGIN:STANDARD',
+        'DTSTART:19701025T030000',
+        'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+        'TZOFFSETFROM:+0200',
+        'TZOFFSETTO:+0100',
+        'TZNAME:CET',
+        'END:STANDARD',
+        'BEGIN:DAYLIGHT',
+        'DTSTART:19700329T020000',
+        'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+        'TZOFFSETFROM:+0100',
+        'TZOFFSETTO:+0200',
+        'TZNAME:CEST',
+        'END:DAYLIGHT',
+        'END:VTIMEZONE',
       ];
+      let eventCount = 0;
       weeks.forEach(week => {
         week.days.forEach(day => {
           if(!day || day.isRest) return;
@@ -2566,18 +2675,24 @@ function buildHolidayMapForYear(year){
           let summary = `Turno ${day.start}\u2013${day.end}`;
           if(day.isRientro) summary += ' (Rientro)';
           if(day.isHoliday) summary += ` \u00b7 ${day.holidayName}`;
+          const uid = `${dateStr}-${day.start.replace(':','')}-${safeName}@matrice-orari`;
           lines.push('BEGIN:VEVENT');
-          lines.push(`DTSTART:${startTime}`);
-          lines.push(`DTEND:${endTime}`);
-          lines.push(`SUMMARY:${summary}`);
-          lines.push(`UID:${dateStr}-${safeName}-@matrice-visual`);
+          lines.push(`UID:${uid}`);
+          lines.push(`DTSTAMP:${dtstamp}`);
+          lines.push(`DTSTART;TZID=Europe/Rome:${startTime}`);
+          lines.push(`DTEND;TZID=Europe/Rome:${endTime}`);
+          lines.push(fold(`SUMMARY:${escapeIcs(summary)}`));
+          lines.push(fold(`DESCRIPTION:${escapeIcs('Turno di '+name+(day.isRientro?' (Rientro in sede)':'')+(day.isHoliday?' \u00b7 '+day.holidayName:''))}`));
+          lines.push('TRANSP:OPAQUE');
+          lines.push('STATUS:CONFIRMED');
           lines.push('END:VEVENT');
+          eventCount++;
         });
       });
       lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+      const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
       _downloadBlob(blob, `turni-${safeName}-${_colleagueViewYear}.ics`);
-      toast('Esportato!', `Importa turni-${name} ${_colleagueViewYear}.ics in Google o Apple Calendar`);
+      toast('Esportato!', `${eventCount} turni \u00b7 compatibile iOS, Android, Outlook`);
     }
 
     async function saveColleaguePng(){
@@ -4987,6 +5102,25 @@ function buildHolidayMapForYear(year){
 
       // Export ICS (Google/Apple Calendar)
       document.getElementById('exportIcsBtn').addEventListener('click', ()=> exportColleagueIcs());
+      document.getElementById('permaLinkBtn').addEventListener('click', ()=> {
+        if(!_viewedColleague) return;
+        const payload = {
+          n: _viewedColleague.name,
+          r: _viewedColleague.role,
+          d: _viewedColleague.durationKey,
+          dm: _viewedColleague.durationMinutes,
+          w: _viewedColleague.startWeekISO,
+          a: _viewedColleague.anchorPatternIndex,
+          t: _viewedColleague.team || null
+        };
+        const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const url = window.location.origin + window.location.pathname + '#share=' + b64;
+        navigator.clipboard.writeText(url).then(()=>{
+          toast('Link copiato!', 'Funziona per sempre, non scade mai. Condividilo dove vuoi.');
+        }).catch(()=>{
+          prompt('Copia questo link:', url);
+        });
+      });
       // Toggle calendario / schede / tabella
       const _allToggleBtns = ['toggleCalBtn','toggleCardsBtn','toggleTblBtn'];
       function _setColleagueToggle(active){
@@ -5044,6 +5178,32 @@ function buildHolidayMapForYear(year){
 
       // Improve touch scrolling: keep vertical pan enabled even over the table
       document.addEventListener('touchmove', ()=>{}, {passive:true});
+
+      // Permanent link handler: #share=<base64> apre direttamente la matrice del collega
+      (function(){
+        const hash = window.location.hash || '';
+        const m = hash.match(/share=([^&]+)/);
+        if(!m) return;
+        try{
+          const b64 = m[1].replace(/-/g,'+').replace(/_/g,'/');
+          const json = decodeURIComponent(escape(atob(b64)));
+          const p = JSON.parse(json);
+          const c = {
+            id: 'shared-'+Date.now(),
+            name: p.n || 'Condiviso',
+            role: p.r || 'dipendente',
+            durationKey: p.d || '30h',
+            durationMinutes: p.dm || 360,
+            startWeekISO: p.w,
+            anchorPatternIndex: p.a !== undefined ? p.a : 0,
+            team: p.t || null
+          };
+          setTimeout(()=> openColleagueMatrix(c), 400);
+        } catch(e){
+          console.warn('share link parse error', e);
+          toast('Link non valido', 'Il link condiviso è corrotto o malformato.');
+        }
+      })();
     }
 
     // Function to switch to card view for mobile or tablet
@@ -5079,26 +5239,91 @@ function buildHolidayMapForYear(year){
       const today = isoDate(new Date());
       const day = getScheduleOnDate(cfg, today);
       if(!day){ card.style.display = 'none'; return; }
-      card.style.display = 'flex';
+      card.style.display = 'grid';
       const timeEl = document.getElementById('todayTime');
       const subEl = document.getElementById('todaySub');
+      const labelEl = document.getElementById('todayLabel');
+      const cdEl = document.getElementById('todayCountdown');
+      const cdValEl = document.getElementById('todayCountdownValue');
+      const cdLblEl = document.getElementById('todayCountdownLabel');
       const dayNames = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
-      const dayLabel = dayNames[new Date().getDay()];
+      const monthNames = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+      const now = new Date();
+      const dayLabel = dayNames[now.getDay()] + ' ' + now.getDate() + ' ' + monthNames[now.getMonth()];
+      labelEl.textContent = 'Il tuo turno oggi';
       if(day.isRest){
         timeEl.textContent = 'LIBERO';
-        timeEl.style.color = 'var(--danger)';
-        subEl.textContent = dayLabel + (day.holidayName ? ' · ' + day.holidayName : ' · Giorno di riposo');
-      } else if(day.isHoliday){
-        timeEl.textContent = day.start + ' – ' + day.end;
-        timeEl.style.color = 'var(--danger)';
-        subEl.textContent = dayLabel + ' · ' + day.holidayName;
+        timeEl.className = 'today-card-time is-rest';
+        subEl.textContent = dayLabel + (day.holidayName ? ' · ' + day.holidayName : '');
+        cdEl.style.display = 'none';
       } else {
         timeEl.textContent = day.start + ' – ' + day.end;
-        timeEl.style.color = 'var(--text)';
-        subEl.textContent = dayLabel + (day.isRientro ? ' · Rientro in sede' : '');
+        timeEl.className = 'today-card-time';
+        subEl.textContent = dayLabel + (day.holidayName ? ' · ' + day.holidayName : '') + (day.isRientro ? ' · Rientro in sede' : '');
+        const [sh, sm] = day.start.split(':').map(Number);
+        const [eh, em] = day.end.split(':').map(Number);
+        const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm);
+        let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em);
+        if(eh === 0 && em === 0) endDate = new Date(endDate.getTime() + 86400000);
+        if(now < startDate){
+          const diffMin = Math.round((startDate - now) / 60000);
+          const h = Math.floor(diffMin / 60), m = diffMin % 60;
+          cdValEl.textContent = h > 0 ? (h + 'h' + (m ? ' ' + m + 'm' : '')) : (m + 'm');
+          cdLblEl.textContent = 'inizia tra';
+          cdEl.style.display = 'flex';
+        } else if(now >= startDate && now < endDate){
+          const diffMin = Math.round((endDate - now) / 60000);
+          const h = Math.floor(diffMin / 60), m = diffMin % 60;
+          cdValEl.textContent = h > 0 ? (h + 'h' + (m ? ' ' + m + 'm' : '')) : (m + 'm');
+          cdLblEl.textContent = 'finisce tra';
+          cdEl.style.display = 'flex';
+          labelEl.textContent = 'In turno ora';
+        } else {
+          cdValEl.textContent = '✓';
+          cdLblEl.textContent = 'finito';
+          cdEl.style.display = 'flex';
+        }
       }
     }
+    setInterval(()=>{ if(state.generated && typeof updateTodayCard==='function') updateTodayCard(); }, 60000);
     updateTodayCard();
+
+    // ===== DESKTOP SIDEBAR (proxy ai bottoni admin originali) =====
+    (function(){
+      const map = {
+        sidebarColleghi: 'orarioColleghiBtn',
+        sidebarCerca: 'cercaOrarioBtn',
+        sidebarRientri: 'rientriBtn',
+        sidebarScan: 'scanBtn'
+      };
+      Object.entries(map).forEach(([sidebarId, targetId])=>{
+        const sb = document.getElementById(sidebarId);
+        if(!sb) return;
+        sb.addEventListener('click', ()=>{
+          const target = document.getElementById(targetId);
+          if(target) target.click();
+        });
+      });
+      // Sync visibility con admin session
+      function syncSidebar(){
+        const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
+        Object.keys(map).forEach(id => {
+          const el = document.getElementById(id);
+          if(el) el.style.display = isAdmin ? '' : 'none';
+        });
+      }
+      syncSidebar();
+      const _origUpdateAdmin = window.updateAdminUI;
+      if(typeof updateAdminUI === 'function'){
+        const _wrap = updateAdminUI;
+        window.updateAdminUI = function(){ _wrap.apply(this, arguments); syncSidebar(); };
+      }
+      // Hook also on storage event
+      document.addEventListener('click', e=>{
+        if(e.target.closest('#adminLockBtn')) setTimeout(syncSidebar, 100);
+        if(e.target.closest('#confirmAdminBtn')) setTimeout(syncSidebar, 300);
+      });
+    })();
 
     // ===== MOBILE BOTTOM SHEET =====
     (function(){

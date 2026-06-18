@@ -1,4 +1,4 @@
-const CACHE = 'matrice-v3';
+const CACHE = 'matrice-v4';
 const PRECACHE = ['/', '/index.html', '/style.css'];
 
 self.addEventListener('install', e => {

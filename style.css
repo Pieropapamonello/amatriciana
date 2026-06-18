@@ -778,7 +778,7 @@
       inset: 0;
       z-index: 200;
       display:none;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
       background: rgba(0,0,0,0.45);
       padding: 14px;
@@ -1526,33 +1526,91 @@
     }
     .mobile-tools-overlay.open{ display:block; }
 
-    /* "Il mio turno oggi" card */
+    /* Hero "Il mio turno oggi" — card prominente, mostra a colpo d'occhio */
     .today-card{
-      background:#ffffff;
-      border:1px solid #e0e0e0;
-      border-left:4px solid #0066cc;
-      border-radius:var(--radius);
-      padding:16px 18px;
-      display:flex; align-items:center; gap:14px;
-      cursor:pointer; transition:transform .15s;
-      box-shadow:var(--shadow-soft);
+      position: relative;
+      background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 28px 28px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .2s;
+      box-shadow: 0 8px 24px rgba(0,102,204,0.20);
+      overflow: hidden;
+    }
+    .today-card::before{
+      content: '';
+      position: absolute; top: -30%; right: -10%;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .today-card:hover{ transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0,102,204,0.30); }
+    .today-card:active{ transform: scale(0.99); }
+    .today-card-icon{
+      display: none;
+    }
+    .today-card-info{
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; gap: 4px;
+      min-width: 0;
+    }
+    .today-card-label{
+      font-size: 12px; font-weight: 700;
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .today-card-time{
+      font-size: 56px; font-weight: 800;
+      letter-spacing: -2px; line-height: 1;
+      color: #fff;
+      margin-top: 4px;
+    }
+    .today-card-time.is-rest{
+      font-size: 40px;
+      color: #ffd1d1;
+    }
+    .today-card-sub{
+      font-size: 14px; font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      margin-top: 4px;
+    }
+    .today-card-countdown{
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+      min-width: 110px;
+    }
+    .today-card-countdown-value{
+      font-size: 24px; font-weight: 800;
+      color: #fff; line-height: 1;
+    }
+    .today-card-countdown-label{
+      font-size: 10px; font-weight: 700;
+      color: rgba(255,255,255,0.70);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-top: 6px;
+    }
+    @media (max-width: 560px){
+      .today-card{ padding: 22px 20px; gap: 14px; }
+      .today-card-time{ font-size: 44px; letter-spacing: -1.5px; }
+      .today-card-countdown{ padding: 10px 14px; min-width: 90px; }
+      .today-card-countdown-value{ font-size: 18px; }
     }
     html[data-theme="dark"] .today-card{
-      background:#1a1a1a;
-      border-color:#2e2e2e;
-      border-left-color:#0066cc;
+      background: linear-gradient(135deg, #0066cc 0%, #003070 100%);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.40);
     }
-    .today-card:active{ transform:scale(0.98); }
-    .today-card-icon{
-      width:48px; height:48px; border-radius:6px;
-      background:#0066cc;
-      display:grid; place-items:center; flex-shrink:0;
-      color:#fff; font-size:20px;
-    }
-    .today-card-info{ flex:1; min-width:0; }
-    .today-card-label{ font-size:11px; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-    .today-card-time{ font-size:24px; font-weight:900; letter-spacing:-0.5px; margin-top:2px; }
-    .today-card-sub{ font-size:12px; color:var(--muted); font-weight:700; margin-top:2px; }
 
     /* Swap result card classes (replacing inline styles) */
     .swap-card{
@@ -1585,6 +1643,52 @@
     .topbar .brand{ flex: 1 1 auto; min-width: 0; }
     .topbar .brand-text{ flex: 0 1 auto; }
     .topbar .top-actions{ flex-shrink: 0; }
+
+    /* Desktop sidebar */
+    .desktop-sidebar{
+      display: none;
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 72px;
+      background: #ffffff;
+      border-right: 1px solid #e0e0e0;
+      padding-top: calc(env(safe-area-inset-top) + 70px);
+      padding-bottom: 20px;
+      z-index: 9998;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    html[data-theme="dark"] .desktop-sidebar{
+      background: #1a1a1a;
+      border-right-color: #2e2e2e;
+    }
+    .desktop-sidebar .ctrl{
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      padding: 10px 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 56px;
+      transition: background .15s;
+    }
+    .desktop-sidebar .ctrl:hover{ background: #f0f7ff; }
+    html[data-theme="dark"] .desktop-sidebar .ctrl:hover{ background: #222; }
+    .desktop-sidebar .ctrl .icon-btn{
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    .desktop-sidebar .ctrl .label{
+      font-size: 10px; font-weight: 700;
+      color: #6b7280;
+    }
+    @media (min-width: 900px){
+      .desktop-sidebar{ display: flex; }
+      .app-shell{ padding-left: 72px; }
+      .topbar{ padding-left: 92px; }
+      .topbar .admin-tools-inline{ display: none !important; }
+    }
 
     /* Hide admin tools on topbar for mobile, show hamburger */
     @media (max-width: 680px){
