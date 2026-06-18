@@ -35,6 +35,17 @@
           <div class="share-header-sub" id="shareSub">Turni condivisi</div>
         </div>
       </div>
+      <div class="share-actions">
+        <button class="share-action-btn" id="shareToCalBtn" type="button">
+          <i class="fa-regular fa-calendar-plus"></i><span>Calendario</span>
+        </button>
+        <button class="share-action-btn" id="shareToTgBtn" type="button">
+          <i class="fa-brands fa-telegram"></i><span>Telegram</span>
+        </button>
+        <button class="share-action-btn" id="shareGenericBtn" type="button">
+          <i class="fa-solid fa-share-nodes"></i><span>Condividi</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -5369,6 +5380,51 @@ function buildHolidayMapForYear(year){
           }
           document.title = 'Turni ' + c.name + ' · Matrice Orari';
           setTimeout(()=> openColleagueMatrix(c), 200);
+
+          // Bind dei bottoni share (Calendario / Telegram / Condividi)
+          const shareUrl = window.location.href;
+          const shareTitle = 'Turni di ' + c.name;
+          const shareText = 'Guarda i turni di ' + c.name + ' su Matrice Orari';
+
+          const calBtn = document.getElementById('shareToCalBtn');
+          if(calBtn) calBtn.addEventListener('click', ()=>{
+            if(typeof exportColleagueIcs === 'function'){
+              exportColleagueIcs();
+              setTimeout(()=>{
+                toast('Importa nel calendario', 'Apri il file scaricato: si aprirà nel tuo calendario (iOS / Android / Outlook).');
+              }, 600);
+            }
+          });
+
+          const tgBtn = document.getElementById('shareToTgBtn');
+          if(tgBtn) tgBtn.addEventListener('click', async ()=>{
+            try{
+              const info = await fetch('/api/telegram/info').then(r=>r.json());
+              if(!info.enabled || !info.botUsername){
+                toast('Telegram non attivo', 'L\'amministratore deve configurare il bot Telegram.');
+                return;
+              }
+              const tgLink = 'https://t.me/'+info.botUsername+'?start='+encodeURIComponent(c.id || ('shared-'+Date.now()));
+              window.open(tgLink, '_blank');
+              toast('Apri Telegram', 'Premi "Avvia" nel bot per ricevere le notifiche turno.');
+            } catch(e){ toast('Errore', 'Impossibile contattare il server.'); }
+          });
+
+          const genBtn = document.getElementById('shareGenericBtn');
+          if(genBtn) genBtn.addEventListener('click', async ()=>{
+            if(navigator.share){
+              try{
+                await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+              } catch(e){ /* utente ha annullato */ }
+            } else {
+              try{
+                await navigator.clipboard.writeText(shareUrl);
+                toast('Link copiato!', 'Incollalo su WhatsApp, Discord, Email o dove preferisci.');
+              } catch(e){
+                prompt('Copia il link:', shareUrl);
+              }
+            }
+          });
         } catch(e){
           console.warn('share link parse error', e);
           toast('Link non valido', 'Il link condiviso è corrotto o malformato.');

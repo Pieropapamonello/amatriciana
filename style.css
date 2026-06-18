@@ -1057,6 +1057,38 @@
     .share-header-text{ min-width: 0; }
     .share-header-title{ font-size: 18px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.1; }
     .share-header-sub{ font-size: 12px; color: rgba(255,255,255,0.75); font-weight: 600; margin-top: 2px; }
+    .share-actions{
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .share-action-btn{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.22);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+      backdrop-filter: blur(8px);
+    }
+    .share-action-btn:hover{ background: rgba(255,255,255,0.25); }
+    .share-action-btn:active{ transform: translateY(1px); }
+    .share-action-btn i{ font-size: 14px; }
+    @media (max-width: 640px){
+      .share-header-inner{ flex-direction: column; align-items: stretch; gap: 12px; }
+      .share-actions{ justify-content: stretch; gap: 6px; }
+      .share-action-btn{ flex: 1; justify-content: center; padding: 10px 8px; font-size: 12px; }
+      .share-action-btn span{ display: none; }
+      .share-action-btn i{ font-size: 18px; }
+    }
+
     .share-footer{
       display: none;
       padding: 14px 24px 28px;
