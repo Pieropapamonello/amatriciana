@@ -169,6 +169,24 @@
     <input type="file" id="importFileInput" accept=".json" style="display:none;" />
 
     <main class="grid">
+      <!-- Guest landing: visibile solo se non admin e nessun profilo caricato -->
+      <div class="card guest-card" id="guestCard" style="display:none;">
+        <div style="padding:32px 24px;text-align:center;">
+          <div style="width:64px;height:64px;margin:0 auto 14px;background:linear-gradient(135deg,#0066cc,#004a99);border-radius:14px;display:grid;place-items:center;">
+            <svg viewBox="0 0 32 32" width="32" height="32" style="fill:#fff;"><path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/></svg>
+          </div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px;">Benvenuto in Matrice Orari</div>
+          <div style="font-size:14px;color:var(--muted);font-weight:600;margin-bottom:22px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.5;">
+            Seleziona il tuo nome qui sotto per visualizzare i tuoi turni. Le matrici vengono create dall'amministratore.
+          </div>
+          <div style="max-width:340px;margin:0 auto;">
+            <select class="select-like" id="guestProfileSelect" style="width:100%;font-size:14px;padding:11px 14px;" aria-label="Seleziona il tuo profilo">
+              <option value="">— Seleziona il tuo nome —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Hero: Il mio turno oggi -->
       <div id="todayCard" class="today-card" style="display:none;">
         <div class="today-card-info">
@@ -182,7 +200,7 @@
         </div>
       </div>
 
-      <section class="card">
+      <section class="card admin-only-card" id="settingsCard">
         <div class="card-head">
           <div>
             <div class="card-title">Impostazioni</div>
@@ -1977,6 +1995,57 @@ function buildHolidayMapForYear(year){
 
     // ===== ADMIN =====
 
+    function updateGuestState(){
+      const guestCard = document.getElementById('guestCard');
+      const sel = document.getElementById('guestProfileSelect');
+      if(!guestCard || !sel) return;
+      const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
+      const hasProfile = !!(state.role && state.startWeekISO && state.anchorPatternIndex !== null && state.durationMinutes);
+      // Mostra guest card quando: non admin AND non in share-mode AND non ha un profilo caricato
+      const isShareMode = document.body.classList.contains('share-mode');
+      const showGuest = !isAdmin && !hasProfile && !isShareMode;
+      guestCard.style.display = showGuest ? '' : 'none';
+      // Popola select se vuoto
+      if(showGuest && sel.options.length <= 1 && Array.isArray(state.colleghi) && state.colleghi.length){
+        sel.innerHTML = '<option value="">— Seleziona il tuo nome —</option>';
+        state.colleghi.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(c=>{
+          if(!c.startWeekISO || c.anchorPatternIndex === null) return;
+          const o = document.createElement('option');
+          o.value = c.id;
+          o.textContent = c.name + ' (' + (c.role==='tutor'?'Tutor':'Dip') + (c.team?' T'+c.team:'') + ')';
+          sel.appendChild(o);
+        });
+      }
+    }
+
+    function bindGuestSelector(){
+      const sel = document.getElementById('guestProfileSelect');
+      if(!sel || sel._bound) return;
+      sel._bound = true;
+      sel.addEventListener('change', ()=>{
+        const id = sel.value;
+        if(!id) return;
+        const c = state.colleghi.find(x=>x.id===id);
+        if(!c) return;
+        state.role = c.role || 'dipendente';
+        state.durationKey = c.durationKey;
+        state.durationMinutes = c.durationMinutes;
+        state.startWeekISO = c.startWeekISO;
+        state.anchorPatternIndex = c.anchorPatternIndex;
+        state.team = c.team || null;
+        state.generated = true;
+        setActiveRole(state.role);
+        safeStorageSet('quickProfileId', c.id);
+        safeStorageSet('operatorRole', state.role);
+        if(c.durationKey) safeStorageSet('durationKey', c.durationKey);
+        if(c.startWeekISO) safeStorageSet('startWeekISO', c.startWeekISO);
+        if(c.anchorPatternIndex !== null) safeStorageSet('anchorPatternIndex', String(c.anchorPatternIndex));
+        if(typeof render === 'function') render();
+        updateGuestState();
+        toast('Profilo caricato', c.name);
+      });
+    }
+
     function isAdminSession(){
       try{ return sessionStorage.getItem('adminSession') === '1'; } catch(e){ return false; }
     }
@@ -1986,6 +2055,8 @@ function buildHolidayMapForYear(year){
 
     function updateAdminUI(){
       const isAdmin = isAdminSession();
+      document.body.classList.toggle('is-admin', isAdmin);
+      updateGuestState();
       // Lock button (in topbar)
       const lockBtn = document.getElementById('adminLockBtn');
       if(lockBtn){
@@ -2309,7 +2380,7 @@ function buildHolidayMapForYear(year){
     let _viewedColleague = null;
     let _aiApiKey = '';
     fetch('/api/gemini-key').then(r=>r.json()).then(d=>{ if(d.key) _aiApiKey = d.key; }).catch(()=>{});
-    let _colleagueViewMode = 'calendar'; // 'calendar' | 'cards' | 'table'
+    let _colleagueViewMode = 'calendar'; // 'calendar' | 'table' (cards rimossa)
     let _colleagueViewYear = new Date().getFullYear();
 
     function _updateColleagueYearLabel(){
@@ -4667,43 +4738,19 @@ function buildHolidayMapForYear(year){
 
       // restore saved mode
       const saved = safeStorageGet('viewMode');
-      // default to saved preference
-      const validModes = ['table','cards','calendar'];
-      state.viewMode = validModes.includes(saved) ? saved : 'table';
-
-      // If small screen (mobile) we force cards view. Listen for changes to viewport size
-      try{
-        const m = window.matchMedia('(max-width: 720px)');
-        const applyResponsive = (mq)=>{
-          if(mq.matches){
-            state.viewMode = 'cards';
-          } else {
-            const restored = safeStorageGet('viewMode');
-            state.viewMode = validModes.includes(restored) ? restored : 'table';
-          }
-          updateViewToggleIcon();
-          if(state.generated) render();
-        };
-        // initial apply
-        applyResponsive(m);
-        // listen for changes
-        if(typeof m.addEventListener === 'function') m.addEventListener('change', (e)=>applyResponsive(e));
-        else if(typeof m.addListener === 'function') m.addListener((e)=>applyResponsive(e));
-      }catch(e){
-        updateViewToggleIcon();
-      }
+      // default to saved preference (cards view removed)
+      const validModes = ['table','calendar'];
+      state.viewMode = validModes.includes(saved) ? saved : 'calendar';
+      updateViewToggleIcon();
 
       btn.addEventListener('click', (e)=>{
         addRipple(btn, e.clientX || (btn.getBoundingClientRect().left+10), e.clientY || (btn.getBoundingClientRect().top+10));
         playClickSound();
-        // Ciclo: table → cards → calendar → table
-        const cycle = ['table','cards','calendar'];
-        const idx = cycle.indexOf(state.viewMode);
-        state.viewMode = cycle[(idx + 1) % cycle.length];
+        // Ciclo: table → calendar → table (schede rimosse)
+        state.viewMode = state.viewMode === 'table' ? 'calendar' : 'table';
         safeStorageSet('viewMode', state.viewMode);
         updateViewToggleIcon();
         if(state.generated) render();
-        // toast removed for view toggle per user preference
       });
     }
 
@@ -4712,10 +4759,10 @@ function buildHolidayMapForYear(year){
       if(!btn) return;
       const icon = btn.querySelector('i');
       if(!icon) return;
-      const iconMap = { table: 'fa-solid fa-layer-group', cards: 'fa-solid fa-calendar-days', calendar: 'fa-solid fa-table-cells-large' };
-      const labelMap = { table: 'Passa a schede', cards: 'Passa a calendario', calendar: 'Passa a tabella' };
-      const activeLabel = { table: 'Tabella', cards: 'Schede', calendar: 'Calendario' };
-      icon.className = iconMap[state.viewMode] || 'fa-solid fa-layer-group';
+      const iconMap = { table: 'fa-solid fa-table-cells-large', calendar: 'fa-solid fa-table-list' };
+      const labelMap = { table: 'Passa a calendario', calendar: 'Passa a tabella' };
+      const activeLabel = { table: 'Tabella', calendar: 'Calendario' };
+      icon.className = iconMap[state.viewMode] || 'fa-solid fa-table-cells-large';
       btn.setAttribute('aria-label', labelMap[state.viewMode] || 'Cambia vista');
       const vl = document.getElementById('viewLabel');
       if(vl) vl.textContent = activeLabel[state.viewMode] || 'Vista';
@@ -5282,6 +5329,12 @@ function buildHolidayMapForYear(year){
 
       // Riconcilia stato UI con stato salvato in localStorage
       syncStepsFromState();
+
+      // Guest selector + admin UI sync iniziale
+      bindGuestSelector();
+      updateAdminUI();
+      // Re-aggiorna guest state quando i colleghi arrivano da Firebase
+      _fbInitPromise.then(()=> setTimeout(updateGuestState, 500));
 
       // Improve touch scrolling: keep vertical pan enabled even over the table
       document.addEventListener('touchmove', ()=>{}, {passive:true});

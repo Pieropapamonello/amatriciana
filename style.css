@@ -969,6 +969,37 @@
     }
     .skip-link:focus{ top: 8px; }
 
+    /* Hide admin-only elements when not logged in as admin */
+    body:not(.is-admin) .admin-only-card{ display: none !important; }
+    body:not(.is-admin) #resetBtn,
+    body:not(.is-admin) #generateBtn,
+    body:not(.is-admin) #addColleagueBtn,
+    body:not(.is-admin) #saveTopBtn{
+      display: none !important;
+    }
+    /* Hide topbar admin tools wrapper when not admin */
+    body:not(.is-admin) .admin-tools-inline{ display: none !important; }
+    body:not(.is-admin) .desktop-sidebar{ display: none !important; }
+    body:not(.is-admin) #mobileMenuBtn{ display: none !important; }
+    body:not(.is-admin) #importDataBtn,
+    body:not(.is-admin) #exportDataBtn,
+    body:not(.is-admin) #teamDataBtns{ display: none !important; }
+    body:not(.is-admin) #permaLinkBtn{ display: none !important; }
+    body:not(.is-admin).is-admin .admin-tools-inline{ display: flex !important; }
+    body:not(.is-admin) #mobile-tools-sheet,
+    body:not(.is-admin) #mobileToolsSheet,
+    body:not(.is-admin) #mobileToolsOverlay{ display: none !important; }
+    @media (min-width: 900px){
+      body:not(.is-admin) .app-shell{ padding-left: 0 !important; }
+      body:not(.is-admin) .topbar{ padding-left: 20px !important; }
+    }
+    .guest-card{ animation: cardFadeIn .4s ease-out both; }
+
+    /* Vista 'schede' rimossa: nascondo il bottone toggle nel modale collega */
+    #toggleCardsBtn{ display: none !important; }
+    /* Anche il wrap matrix cards se per qualche motivo viene reso */
+    #matrixCardsWrap{ display: none !important; }
+
     /* ===== SHARE-ONLY MODE ===== */
     /* Quando il link contiene #share=, mostra solo la matrice del collega */
     body.share-mode .topbar,
