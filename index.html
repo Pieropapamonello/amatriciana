@@ -253,25 +253,35 @@
   </div>
 
     <main class="grid">
-      <!-- Guest landing: visibile solo se non admin e nessun profilo caricato -->
-      <div class="card guest-card" id="guestCard" style="display:none;">
-        <div style="padding:36px 24px 32px;text-align:center;">
-          <div style="width:80px;height:80px;margin:0 auto 18px;background:linear-gradient(135deg,#0066cc,#004a99);border-radius:18px;display:grid;place-items:center;box-shadow:0 12px 32px rgba(0,102,204,0.30);">
-            <svg viewBox="0 0 32 32" width="40" height="40" style="fill:#fff;"><path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/></svg>
+      <!-- Guest landing: visibile sempre quando NON sei admin (CSS-driven) -->
+      <div class="card guest-card" id="guestCard">
+        <div class="guest-inner">
+          <div class="guest-logo">
+            <svg viewBox="0 0 32 32" width="44" height="44" style="fill:#fff;">
+              <path d="M5 6h22v3H5zM5 13h6v13H5zm8 0h6v13h-6zm8 0h6v13h-6z"/>
+            </svg>
           </div>
-          <div style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px;">Benvenuto</div>
-          <div style="font-size:15px;color:var(--muted);font-weight:600;margin-bottom:26px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.55;">
-            Per ricevere la <strong style="color:var(--text);">tua matrice turni</strong> richiedila all'amministratore tramite il nostro <strong style="color:var(--text);">bot Telegram</strong>. Bastano pochi passi guidati.
+          <div class="guest-title">Richiedi la tua matrice turni</div>
+          <div class="guest-desc">
+            Per ricevere la <strong>tua matrice</strong> personalizzata devi <strong>contattare l'amministratore</strong> tramite il bot Telegram dell'app.
           </div>
-          <a id="guestTgRequestBtn" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;background:linear-gradient(135deg,#229ED9,#1c8bb8);color:#fff;text-decoration:none;border-radius:10px;font-weight:800;font-size:15px;box-shadow:0 8px 24px rgba(34,158,217,0.30);transition:transform .15s,box-shadow .2s;">
-            <i class="fa-brands fa-telegram" style="font-size:22px;"></i>
-            Richiedi la mia matrice
+          <div class="guest-steps">
+            <div class="guest-step"><span class="guest-step-num">1</span><span>Apri il bot Telegram cliccando il bottone qui sotto</span></div>
+            <div class="guest-step"><span class="guest-step-num">2</span><span>Premi <strong>📋 Richiedi la mia matrice</strong></span></div>
+            <div class="guest-step"><span class="guest-step-num">3</span><span>Inserisci nome, ruolo, team, settimana del rientro</span></div>
+            <div class="guest-step"><span class="guest-step-num">4</span><span>Carica gli screenshot delle ultime 2 settimane di turni <em>(senza cambi)</em></span></div>
+            <div class="guest-step"><span class="guest-step-num">5</span><span>L'amministratore riceverà la richiesta e ti preparerà la matrice</span></div>
+          </div>
+          <a id="guestTgRequestBtn" href="#" target="_blank" rel="noopener" class="guest-cta">
+            <i class="fa-brands fa-telegram"></i>
+            <span>Apri il bot Telegram</span>
           </a>
-          <div style="margin-top:18px;font-size:12px;color:var(--muted);">
-            Già hai una matrice? <a href="#" id="guestExistingLink" style="color:var(--accent);font-weight:700;text-decoration:none;">Seleziona il tuo nome</a>
+          <div class="guest-footer">
+            <span>Hai già una matrice configurata?</span>
+            <a href="#" id="guestExistingLink">Seleziona il tuo nome</a>
           </div>
-          <div id="guestSelectorWrap" style="display:none;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;">
-            <select class="select-like" id="guestProfileSelect" style="width:100%;font-size:14px;padding:11px 14px;" aria-label="Seleziona il tuo profilo">
+          <div id="guestSelectorWrap" style="display:none;">
+            <select class="select-like" id="guestProfileSelect" aria-label="Seleziona il tuo profilo">
               <option value="">— Seleziona il tuo nome —</option>
             </select>
           </div>
@@ -2180,12 +2190,16 @@ function buildHolidayMapForYear(year){
       if(!guestCard || !sel) return;
       const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
       const hasProfile = !!(state.role && state.startWeekISO && state.anchorPatternIndex !== null && state.durationMinutes);
-      // Mostra guest card quando: non admin AND non in share-mode AND non ha un profilo caricato
       const isShareMode = document.body.classList.contains('share-mode');
-      const showGuest = !isAdmin && !hasProfile && !isShareMode;
-      guestCard.style.display = showGuest ? '' : 'none';
+      // La guest card è visibile via CSS quando non c'è .is-admin/.share-mode.
+      // Qui la nascondiamo SOLO se non admin ma ha un profilo caricato (mostra direttamente la matrice).
+      if(!isAdmin && !isShareMode && hasProfile){
+        guestCard.style.display = 'none';
+      } else {
+        guestCard.style.display = ''; // lascia decidere al CSS
+      }
       // Popola select se vuoto
-      if(showGuest && sel.options.length <= 1 && Array.isArray(state.colleghi) && state.colleghi.length){
+      if(sel.options.length <= 1 && Array.isArray(state.colleghi) && state.colleghi.length){
         sel.innerHTML = '<option value="">— Seleziona il tuo nome —</option>';
         state.colleghi.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(c=>{
           if(!c.startWeekISO || c.anchorPatternIndex === null) return;
