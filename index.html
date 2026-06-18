@@ -179,6 +179,79 @@
     </div>
     <input type="file" id="importFileInput" accept=".json" style="display:none;" />
 
+  <!-- Banner offline -->
+  <div class="offline-banner" id="offlineBanner">
+    <i class="fa-solid fa-wifi" style="margin-right:6px;"></i>Sei offline — alcune funzioni potrebbero non funzionare
+  </div>
+
+  <!-- PWA install banner -->
+  <div class="pwa-install-banner" id="pwaInstallBanner">
+    <div class="pwa-install-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+    <div class="pwa-install-text">
+      <div class="pwa-install-title">Installa l'app</div>
+      <div class="pwa-install-msg">Aggiungila alla home per usarla come app nativa</div>
+    </div>
+    <div class="pwa-install-actions">
+      <button id="pwaInstallDismiss" type="button">Più tardi</button>
+      <button id="pwaInstallAccept" type="button" class="primary">Installa</button>
+    </div>
+  </div>
+
+  <!-- Custom confirm modal -->
+  <div class="confirm-overlay" id="confirmOverlay" role="alertdialog" aria-modal="true">
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirmIcon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="confirm-title" id="confirmTitle">Sei sicuro?</div>
+      <div class="confirm-msg" id="confirmMsg">Questa azione non può essere annullata.</div>
+      <div class="confirm-buttons">
+        <button type="button" class="confirm-btn-cancel" id="confirmCancel">Annulla</button>
+        <button type="button" class="confirm-btn-confirm" id="confirmAccept">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard shortcuts dialog -->
+  <div class="shortcuts-dialog" id="shortcutsDialog" role="dialog" aria-modal="true">
+    <div class="shortcuts-box">
+      <div class="shortcuts-title">Scorciatoie tastiera</div>
+      <div class="shortcut-row"><span>Cambia tema (chiaro/scuro)</span><kbd>T</kbd></div>
+      <div class="shortcut-row"><span>Cambia vista (tabella/calendario)</span><kbd>V</kbd></div>
+      <div class="shortcut-row"><span>Apri/chiudi cerca</span><kbd>/</kbd></div>
+      <div class="shortcut-row"><span>Apri colleghi</span><kbd>C</kbd></div>
+      <div class="shortcut-row"><span>Mostra queste scorciatoie</span><kbd>?</kbd></div>
+      <div class="shortcut-row"><span>Chiudi dialogo</span><kbd>Esc</kbd></div>
+      <div style="text-align:right;margin-top:14px;"><button type="button" class="confirm-btn-cancel" onclick="document.getElementById('shortcutsDialog').classList.remove('open');">Chiudi</button></div>
+    </div>
+  </div>
+
+  <!-- QR/Link share dialog -->
+  <div class="confirm-overlay" id="qrDialog" role="dialog" aria-modal="true">
+    <div class="confirm-box" style="max-width:340px;text-align:center;">
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Condividi matrice</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;" id="qrSubtitle">Link permanente · non scade mai</div>
+      <div class="qr-container" id="qrContainer"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Scansiona col cellulare o copia il link</div>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button type="button" class="confirm-btn-cancel" id="qrCloseBtn">Chiudi</button>
+        <button type="button" class="confirm-btn-confirm" style="background:var(--accent);" id="qrCopyBtn"><i class="fa-solid fa-copy" style="margin-right:5px;"></i>Copia link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding tour -->
+  <div class="tour-overlay" id="tourOverlay">
+    <div class="tour-card">
+      <div class="tour-step" id="tourStepLabel">Passo 1 di 5</div>
+      <div class="tour-title" id="tourTitle">Benvenuto in Matrice Orari</div>
+      <div class="tour-text" id="tourText">Ti guido in 5 passi per impostare l'app.</div>
+      <div class="tour-dots" id="tourDots"></div>
+      <div class="tour-buttons">
+        <button type="button" class="tour-skip" id="tourSkip">Salta</button>
+        <button type="button" class="tour-next" id="tourNext">Avanti</button>
+      </div>
+    </div>
+  </div>
+
     <main class="grid">
       <!-- Guest landing: visibile solo se non admin e nessun profilo caricato -->
       <div class="card guest-card" id="guestCard" style="display:none;">
@@ -375,8 +448,17 @@
             </div>
           </div>
           <div class="team-list" id="teamList">
-            <div class="note" id="teamEmpty" style="color:var(--muted); font-size:13px;">
-              <i class="fa-regular fa-users" style="margin-right:6px;"></i>Nessun collega nel team.
+            <div class="empty-state" id="teamEmpty">
+              <svg class="empty-state-icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="48" r="20" fill="none" stroke="currentColor" stroke-width="3"/>
+                <path d="M28 100 Q28 76 60 76 Q92 76 92 100" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="32" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.5"/>
+                <circle cx="88" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.5"/>
+                <circle cx="98" cy="32" r="6" fill="currentColor" opacity="0.3"/>
+                <path d="M95 32 L101 32 M98 29 L98 35" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <div class="empty-state-title">Nessun collega nel team</div>
+              <div class="empty-state-msg">Premi il bottone <i class="fa-solid fa-user-plus" style="color:var(--accent);"></i> in alto per aggiungere il primo collega.</div>
             </div>
           </div>
         </div>
@@ -511,6 +593,22 @@
             </div>
           </div>
           <div id="swapResult" style="display:none; margin-top:12px;"></div>
+        </div>
+      </section>
+
+      <!-- Smart swap suggestions: scambi compatibili oggi/domani -->
+      <section class="card admin-only-card" id="smartSwapCard" style="display:none;">
+        <div class="card-head">
+          <div>
+            <div class="card-title"><i class="fa-solid fa-bolt" style="color:var(--accent);margin-right:6px;"></i>Suggerimenti Scambi</div>
+            <div class="card-sub">Scambi compatibili per oggi e domani — calcolati automaticamente.</div>
+          </div>
+          <button class="icon-btn" id="smartSwapRefreshBtn" type="button" title="Aggiorna suggerimenti" aria-label="Aggiorna"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+        <div class="card-body" id="smartSwapBody">
+          <div class="empty-state" style="padding:18px 12px;">
+            <div class="empty-state-msg">Genera la tua matrice e aggiungi colleghi per vedere i suggerimenti.</div>
+          </div>
         </div>
       </section>
 
@@ -928,7 +1026,7 @@
       setTimeout(() => r.remove(), 650);
     }
 
-    function toast(title, msg){
+    function toast(title, msg, type){
       let container = document.getElementById('toastContainer');
       if(!container){
         container = document.createElement('div');
@@ -936,16 +1034,79 @@
         container.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:calc(100% - 32px);max-width:400px;';
         document.body.appendChild(container);
       }
+      // Auto-detect type from title keywords
+      let variant = type;
+      if(!variant){
+        const t = String(title).toLowerCase();
+        if(/errore|fallit|impossibile|invalid|non riuscit/.test(t)) variant = 'error';
+        else if(/attenzione|avviso|warning|assente/.test(t)) variant = 'warning';
+        else if(/salvat|copiat|esportat|importat|applicat|collegat|✅/.test(t)) variant = 'success';
+        else variant = 'info';
+      }
+      const iconMap = {
+        success: 'fa-circle-check',
+        warning: 'fa-triangle-exclamation',
+        error: 'fa-circle-xmark',
+        info: 'fa-circle-info'
+      };
       const el = document.createElement('div');
-      el.style.cssText = 'pointer-events:auto;padding:12px 18px;border-radius:14px;background:var(--card);border:1px solid var(--stroke);box-shadow:var(--shadow);backdrop-filter:blur(18px);font-size:13px;font-weight:700;color:var(--text);opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;display:flex;align-items:center;gap:10px;';
-      el.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--ok);font-size:16px;flex-shrink:0;"></i><div><div style="font-weight:900;font-size:12px;">${title}</div>${msg ? '<div style="font-size:12px;opacity:0.7;margin-top:2px;">'+msg+'</div>' : ''}</div>`;
+      el.className = 'toast-item toast-' + variant;
+      el.innerHTML = `<i class="fa-solid ${iconMap[variant]} toast-icon"></i><div class="toast-content"><div class="toast-title">${title}</div>${msg ? '<div class="toast-msg">'+msg+'</div>' : ''}</div>`;
       container.appendChild(el);
       requestAnimationFrame(()=>{ el.style.opacity='1'; el.style.transform='translateY(0)'; });
+      // Haptic feedback su mobile
+      if(navigator.vibrate){
+        try{ navigator.vibrate(variant === 'error' ? [30,40,30] : 12); }catch{}
+      }
       setTimeout(()=>{
         el.style.opacity='0'; el.style.transform='translateY(-8px)';
         setTimeout(()=>el.remove(), 300);
-      }, 3000);
+      }, variant === 'error' ? 4500 : 3000);
     }
+
+    // Custom confirm modal (sostituisce window.confirm)
+    function customConfirm(message, opts){
+      return new Promise(resolve => {
+        const overlay = document.getElementById('confirmOverlay');
+        const titleEl = document.getElementById('confirmTitle');
+        const msgEl = document.getElementById('confirmMsg');
+        const acceptBtn = document.getElementById('confirmAccept');
+        const cancelBtn = document.getElementById('confirmCancel');
+        const iconEl = document.getElementById('confirmIcon');
+        opts = opts || {};
+        titleEl.textContent = opts.title || 'Sei sicuro?';
+        msgEl.textContent = message || '';
+        acceptBtn.textContent = opts.confirmText || 'Conferma';
+        cancelBtn.textContent = opts.cancelText || 'Annulla';
+        if(opts.danger === false){
+          iconEl.style.background = 'rgba(0,102,204,0.10)';
+          iconEl.style.color = 'var(--accent)';
+          acceptBtn.style.background = 'var(--accent)';
+        } else {
+          iconEl.style.background = 'rgba(220,38,38,0.10)';
+          iconEl.style.color = 'var(--danger)';
+          acceptBtn.style.background = 'var(--danger)';
+        }
+        overlay.classList.add('open');
+        function cleanup(){
+          overlay.classList.remove('open');
+          acceptBtn.removeEventListener('click', onAccept);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+        }
+        function onAccept(){ cleanup(); resolve(true); }
+        function onCancel(){ cleanup(); resolve(false); }
+        function onOverlay(e){ if(e.target===overlay){ cleanup(); resolve(false); } }
+        function onKey(e){ if(e.key==='Escape'){ cleanup(); resolve(false); } if(e.key==='Enter'){ cleanup(); resolve(true); } }
+        acceptBtn.addEventListener('click', onAccept);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+        setTimeout(()=>cancelBtn.focus(), 50);
+      });
+    }
+    function vibrate(pattern){ if(navigator.vibrate){ try{ navigator.vibrate(pattern); }catch{} } }
 
     
 
@@ -2352,6 +2513,36 @@ function buildHolidayMapForYear(year){
 
           const row = document.createElement('div');
           row.className = 'colleague-row';
+          row.draggable = isAdmin;
+          row.dataset.colleagueId = c.id;
+          if(isAdmin){
+            row.addEventListener('dragstart', e => {
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', c.id);
+              row.style.opacity = '0.4';
+            });
+            row.addEventListener('dragend', () => { row.style.opacity = ''; });
+            row.addEventListener('dragover', e => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              row.style.borderTop = '2px solid var(--accent)';
+            });
+            row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
+            row.addEventListener('drop', e => {
+              e.preventDefault();
+              row.style.borderTop = '';
+              const draggedId = e.dataTransfer.getData('text/plain');
+              if(draggedId === c.id) return;
+              const fromIdx = state.colleghi.findIndex(x => x.id === draggedId);
+              const toIdx = state.colleghi.findIndex(x => x.id === c.id);
+              if(fromIdx === -1 || toIdx === -1) return;
+              const [moved] = state.colleghi.splice(fromIdx, 1);
+              state.colleghi.splice(toIdx, 0, moved);
+              saveColleghi();
+              renderTeamList();
+              toast('Riordinato', moved.name + ' spostato', 'success');
+            });
+          }
           row.innerHTML = `
             <div class="colleague-avatar">${initial}</div>
             <div class="colleague-info" style="cursor:pointer;flex:1;min-width:0;">
@@ -2372,10 +2563,16 @@ function buildHolidayMapForYear(year){
           row.querySelector('.tg').addEventListener('click', () => connectTelegram(c));
           if(isAdmin){
             row.querySelector('.edit').addEventListener('click', () => openColleagueModal(c.id));
-            row.querySelector('.del').addEventListener('click', () => {
+            row.querySelector('.del').addEventListener('click', async () => {
+              const ok = await customConfirm(
+                `Eliminare definitivamente ${c.name} dal team?`,
+                { title: 'Elimina collega', confirmText: 'Elimina' }
+              );
+              if(!ok) return;
               state.colleghi = state.colleghi.filter(x => x.id !== c.id);
               saveColleghi();
               renderTeamList();
+              toast('Eliminato', c.name + ' rimosso dal team');
             });
           }
           body.appendChild(row);
@@ -5280,12 +5477,30 @@ function buildHolidayMapForYear(year){
         };
         const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
         const url = window.location.origin + window.location.pathname + '#share=' + b64;
-        navigator.clipboard.writeText(url).then(()=>{
-          toast('Link copiato!', 'Funziona per sempre, non scade mai. Condividilo dove vuoi.');
-        }).catch(()=>{
-          prompt('Copia questo link:', url);
-        });
+        showShareQR(url, 'Turni di ' + _viewedColleague.name);
       });
+
+      function showShareQR(url, subtitle){
+        const dialog = document.getElementById('qrDialog');
+        const container = document.getElementById('qrContainer');
+        const subEl = document.getElementById('qrSubtitle');
+        if(subEl) subEl.textContent = subtitle || 'Link permanente · non scade mai';
+        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=' + encodeURIComponent(url);
+        container.innerHTML = '<img src="' + qrUrl + '" alt="QR code" loading="lazy" />';
+        dialog.classList.add('open');
+        const closeBtn = document.getElementById('qrCloseBtn');
+        const copyBtn = document.getElementById('qrCopyBtn');
+        function close(){ dialog.classList.remove('open'); }
+        function copy(){
+          navigator.clipboard.writeText(url).then(()=> toast('Link copiato!', 'Incollalo dove vuoi', 'success'))
+            .catch(()=> prompt('Copia questo link:', url));
+          close();
+        }
+        closeBtn.onclick = close;
+        copyBtn.onclick = copy;
+        dialog.onclick = e => { if(e.target===dialog) close(); };
+      }
+      window.showShareQR = showShareQR;
       // Toggle calendario / schede / tabella
       const _allToggleBtns = ['toggleCalBtn','toggleCardsBtn','toggleTblBtn'];
       function _setColleagueToggle(active){
@@ -5721,6 +5936,254 @@ function buildHolidayMapForYear(year){
     })();
 
     if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+    // ===== PWA INSTALL PROMPT =====
+    (function(){
+      let deferredPrompt = null;
+      const banner = document.getElementById('pwaInstallBanner');
+      const acceptBtn = document.getElementById('pwaInstallAccept');
+      const dismissBtn = document.getElementById('pwaInstallDismiss');
+      if(!banner) return;
+      const dismissedAt = Number(safeStorageGet('pwaDismissedAt') || 0);
+      const sevenDays = 7 * 86400 * 1000;
+      function show(){
+        if(Date.now() - dismissedAt < sevenDays) return;
+        if(window.matchMedia('(display-mode: standalone)').matches) return;
+        banner.classList.add('show');
+      }
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(show, 30000);
+      });
+      acceptBtn.addEventListener('click', async ()=>{
+        banner.classList.remove('show');
+        if(deferredPrompt){
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          if(outcome === 'accepted') toast('Installata!', 'L\'app è ora sulla tua home schermata', 'success');
+        }
+      });
+      dismissBtn.addEventListener('click', ()=>{
+        banner.classList.remove('show');
+        safeStorageSet('pwaDismissedAt', String(Date.now()));
+      });
+      // iOS Safari fallback: niente beforeinstallprompt, mostra solo istruzioni
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+      if(isIOS && !isStandalone){
+        setTimeout(()=>{
+          if(Date.now() - dismissedAt < sevenDays) return;
+          banner.querySelector('.pwa-install-msg').textContent = 'Tocca Condividi → "Aggiungi alla schermata Home"';
+          acceptBtn.style.display = 'none';
+          banner.classList.add('show');
+        }, 30000);
+      }
+    })();
+
+    // ===== OFFLINE BANNER =====
+    (function(){
+      const banner = document.getElementById('offlineBanner');
+      if(!banner) return;
+      function update(){ banner.classList.toggle('show', !navigator.onLine); }
+      window.addEventListener('online', ()=>{ update(); toast('Online', 'Connessione ripristinata', 'success'); });
+      window.addEventListener('offline', update);
+      update();
+    })();
+
+    // ===== KEYBOARD SHORTCUTS =====
+    (function(){
+      document.addEventListener('keydown', (e)=>{
+        // Ignora se l'utente sta scrivendo
+        const tag = (e.target.tagName || '').toLowerCase();
+        if(tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+        if(e.ctrlKey || e.metaKey || e.altKey) return;
+        if(e.key === 't' || e.key === 'T'){
+          const btn = document.getElementById('themeToggle');
+          if(btn) btn.click();
+          e.preventDefault();
+        } else if(e.key === 'v' || e.key === 'V'){
+          const btn = document.getElementById('viewToggle');
+          if(btn) btn.click();
+          e.preventDefault();
+        } else if(e.key === '/'){
+          const btn = document.getElementById('cercaOrarioBtn');
+          if(btn && btn.offsetParent !== null) { btn.click(); e.preventDefault(); }
+        } else if(e.key === 'c' || e.key === 'C'){
+          const btn = document.getElementById('orarioColleghiBtn');
+          if(btn && btn.offsetParent !== null) { btn.click(); e.preventDefault(); }
+        } else if(e.key === '?' || (e.shiftKey && e.key === '?')){
+          document.getElementById('shortcutsDialog').classList.add('open');
+          e.preventDefault();
+        } else if(e.key === 'Escape'){
+          const dlg = document.getElementById('shortcutsDialog');
+          if(dlg && dlg.classList.contains('open')) dlg.classList.remove('open');
+        }
+      });
+    })();
+
+    // ===== ONBOARDING TOUR =====
+    (function(){
+      const overlay = document.getElementById('tourOverlay');
+      if(!overlay) return;
+      const steps = [
+        { t: 'Benvenuto in Matrice Orari', x: 'Ti guido in <strong>5 passi rapidi</strong> per configurare l\'app. Puoi saltare quando vuoi.' },
+        { t: 'Accedi come Admin', x: 'Premi l\'icona <strong>logo</strong> in alto a sinistra per inserire la password admin. Solo l\'admin può creare e modificare le matrici.' },
+        { t: 'Aggiungi i tuoi colleghi', x: 'Clicca su <strong>Colleghi</strong> nel menu e aggiungi nome, ruolo, ore e settimana di partenza di ogni operatore.' },
+        { t: 'Genera la matrice', x: 'Compila il wizard (<strong>Ruolo · Team · Ore · Settimana · Orario</strong>) e premi <strong>OK</strong> per visualizzare la matrice settimanale.' },
+        { t: 'Condividi i turni', x: 'Apri la matrice di un collega e premi <i class="fa-solid fa-link"></i> per generare un <strong>link permanente</strong> da condividere via WhatsApp, Telegram o Email. Funziona per sempre.' }
+      ];
+      let cur = 0;
+      function renderTour(){
+        document.getElementById('tourStepLabel').textContent = `Passo ${cur+1} di ${steps.length}`;
+        document.getElementById('tourTitle').textContent = steps[cur].t;
+        document.getElementById('tourText').innerHTML = steps[cur].x;
+        const dots = document.getElementById('tourDots');
+        dots.innerHTML = '';
+        for(let i=0; i<steps.length; i++){
+          const d = document.createElement('div');
+          d.className = 'tour-dot' + (i === cur ? ' active' : '');
+          dots.appendChild(d);
+        }
+        document.getElementById('tourNext').textContent = cur === steps.length-1 ? 'Inizia' : 'Avanti';
+      }
+      function start(){
+        cur = 0; renderTour(); overlay.classList.add('open');
+      }
+      function close(){
+        overlay.classList.remove('open');
+        safeStorageSet('tourSeen', '1');
+      }
+      document.getElementById('tourNext').addEventListener('click', ()=>{
+        if(cur < steps.length-1){ cur++; renderTour(); }
+        else close();
+      });
+      document.getElementById('tourSkip').addEventListener('click', close);
+      overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+      // Mostra tour solo al primo accesso
+      setTimeout(()=>{
+        if(!safeStorageGet('tourSeen') && !document.body.classList.contains('share-mode')){
+          start();
+        }
+      }, 1500);
+      // Esposto per restart manuale via shortcut o impostazioni future
+      window.startTour = start;
+    })();
+
+    // ===== SKELETON LOADERS =====
+    (function(){
+      if(safeStorageGet('colleghi')) return; // se già abbiamo dati locali, salta skeleton
+      const teamList = document.getElementById('teamList');
+      if(!teamList) return;
+      const skel = document.createElement('div');
+      skel.id = 'teamSkeleton';
+      skel.style.cssText = 'display:none;';
+      skel.innerHTML = '<div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block" style="width:80%;"></div>';
+      teamList.appendChild(skel);
+      // Mostra solo se la card team è visibile e siamo in attesa
+      setTimeout(()=>{
+        const empty = document.getElementById('teamEmpty');
+        if(empty && empty.style.display !== 'none' && state.colleghi.length === 0){
+          // nasconde empty e mostra skeleton se siamo in attesa di Firebase
+          if(_fbReady === false){
+            empty.style.display = 'none';
+            skel.style.display = 'block';
+            _fbInitPromise.then(()=>{ setTimeout(()=>{ skel.remove(); renderTeamList(); }, 300); });
+          }
+        }
+      }, 100);
+    })();
+
+    // ===== SMART SWAP SUGGESTIONS =====
+    function updateSmartSwap(){
+      const card = document.getElementById('smartSwapCard');
+      const body = document.getElementById('smartSwapBody');
+      if(!card || !body) return;
+      const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
+      if(!isAdmin || !state.generated){ card.style.display = 'none'; return; }
+      const myCfg = { role: state.role, startWeekISO: state.startWeekISO, anchorPatternIndex: state.anchorPatternIndex, durationMinutes: state.durationMinutes, team: state.team };
+      const colleghi = state.colleghi.filter(c => c.startWeekISO && c.anchorPatternIndex !== null && c.role === state.role);
+      if(!colleghi.length){
+        body.innerHTML = '<div class="empty-state" style="padding:18px 12px;"><div class="empty-state-msg">Aggiungi colleghi dello stesso ruolo per vedere suggerimenti.</div></div>';
+        card.style.display = '';
+        return;
+      }
+      const today = new Date();
+      const todayISO = isoDate(today);
+      const tomorrowISO = isoDate(addDays(today, 1));
+      const dayAfterISO = isoDate(addDays(today, 2));
+      const targetDates = [todayISO, tomorrowISO, dayAfterISO];
+      const suggestions = [];
+      targetDates.forEach(targetISO => {
+        const myDay = getScheduleOnDate(myCfg, targetISO);
+        if(!myDay) return;
+        colleghi.forEach(c => {
+          const colDay = getScheduleOnDate(c, targetISO);
+          if(!colDay) return;
+          if(myDay.isRest === colDay.isRest && myDay.start === colDay.start) return; // stesso turno: non utile
+          if(myDay.isRest && !colDay.isRest){
+            // io riposo, lui lavora: posso prendere il suo turno
+            suggestions.push({ targetISO, c, colDay, myDay, type: 'take' });
+          } else if(!myDay.isRest && colDay.isRest){
+            // io lavoro, lui riposa: posso cedere il mio
+            suggestions.push({ targetISO, c, colDay, myDay, type: 'give' });
+          } else if(!myDay.isRest && !colDay.isRest && myDay.start !== colDay.start){
+            suggestions.push({ targetISO, c, colDay, myDay, type: 'swap' });
+          }
+        });
+      });
+      if(!suggestions.length){
+        body.innerHTML = '<div class="empty-state" style="padding:18px 12px;"><div class="empty-state-msg">Nessuno scambio compatibile nei prossimi 3 giorni.</div></div>';
+        card.style.display = '';
+        return;
+      }
+      let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+      const dayNames = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+      suggestions.slice(0, 6).forEach(s => {
+        const dt = parseISODate(s.targetISO);
+        const dateLabel = dayNames[dt.getDay()] + ' ' + dt.getDate() + '/' + (dt.getMonth()+1);
+        const myShift = s.myDay.isRest ? '🔴 Riposo' : (s.myDay.start + '–' + s.myDay.end);
+        const colShift = s.colDay.isRest ? '🔴 Riposo' : (s.colDay.start + '–' + s.colDay.end);
+        const typeLabel = s.type === 'take' ? `Prendi il turno di ${escapeHtml(s.c.name)}` :
+                          s.type === 'give' ? `Cedi il tuo turno a ${escapeHtml(s.c.name)}` :
+                          `Scambia turno con ${escapeHtml(s.c.name)}`;
+        const arrow = s.type === 'take' ? '←' : (s.type === 'give' ? '→' : '⇄');
+        html += `<div style="border:1px solid var(--stroke);border-radius:8px;padding:12px 14px;background:var(--ctrl-bg);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:800;font-size:13px;">${typeLabel}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${dateLabel}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;">
+              <span>${myShift}</span>
+              <span style="color:var(--accent);font-size:16px;">${arrow}</span>
+              <span>${colShift}</span>
+            </div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+      if(suggestions.length > 6){
+        html += `<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted);">+${suggestions.length-6} altri suggerimenti — apri <strong>Scambi Orari</strong> per la ricerca completa</div>`;
+      }
+      body.innerHTML = html;
+      card.style.display = '';
+    }
+    // Aggiorna smart swap quando si rerender la matrice
+    const _origUpdateStats = typeof updateStats === 'function' ? updateStats : null;
+    if(_origUpdateStats){
+      const _wrap = updateStats;
+      updateStats = function(){ _wrap.apply(this, arguments); updateSmartSwap(); };
+    }
+    const smartRefreshBtn = document.getElementById('smartSwapRefreshBtn');
+    if(smartRefreshBtn) smartRefreshBtn.addEventListener('click', updateSmartSwap);
+
+    // ===== HAPTIC su bottoni primari =====
+    document.addEventListener('click', e=>{
+      const btn = e.target.closest('.btn, .icon-btn, .segmented button, .sheet-tool-btn, .share-action-btn');
+      if(btn) vibrate(8);
+    }, true);
   </script>
 
 </body>
