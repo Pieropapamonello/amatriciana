@@ -6570,6 +6570,37 @@ function buildHolidayMapForYear(year){
     // Refresh iniziale dopo qualche secondo
     setTimeout(()=>{ if(isAdminSession()) refreshRichieste(); }, 2000);
 
+    // Deep link da notifica Telegram: ?request=<id> apre la richiesta
+    (async function(){
+      const params = new URLSearchParams(window.location.search);
+      const reqId = params.get('request');
+      if(!reqId) return;
+      // Aspetta che la sessione admin sia attiva, poi prova ad aprire
+      let attempts = 0;
+      const tryOpen = async ()=>{
+        attempts++;
+        if(!isAdminSession()){
+          if(attempts < 30){ setTimeout(tryOpen, 800); return; }
+          toast('Accesso admin necessario', 'Fai login come admin per vedere la richiesta', 'warning');
+          return;
+        }
+        // Carica le richieste se non ancora pronte
+        if(!_richiesteCache.length) await refreshRichieste();
+        const req = _richiesteCache.find(r => r.id === reqId);
+        if(!req){
+          toast('Richiesta non trovata', 'La richiesta '+reqId+' non è più disponibile.', 'warning');
+          return;
+        }
+        openModal('richiesteModal');
+        setTimeout(()=> openRequestDetail(reqId), 250);
+      };
+      setTimeout(tryOpen, 1500);
+      // Pulisci URL per evitare riapertura al refresh
+      if(window.history && window.history.replaceState){
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      }
+    })();
+
     // ===== PWA INSTALL PROMPT =====
     (function(){
       let deferredPrompt = null;

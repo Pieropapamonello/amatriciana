@@ -318,10 +318,35 @@ async function handleTelegramUpdate(update) {
       const links = loadLinks();
       links['__admin__'] = { chatId, linkedAt: new Date().toISOString(), name: userName };
       saveLinks(links);
-      await tgSend(chatId, '✅ Sei registrato come amministratore.\nRiceverai qui tutte le richieste di matrici degli utenti.');
+      const pending = loadRequests().filter(r => r.status === 'pending').length;
+      await tgSend(chatId,
+        '✅ <b>Sei registrato come amministratore.</b>\n\n' +
+        '🚨 Ti arriverà una notifica qui per ogni nuova richiesta di matrice.\n' +
+        '📱 Puoi gestire tutte le richieste direttamente dall\'app admin.\n\n' +
+        (pending > 0 ? `📬 Hai <b>${pending}</b> richieste in attesa.` : '✨ Nessuna richiesta pendente al momento.')
+      );
     } else {
       await tgSend(chatId, '❌ Password admin errata.');
     }
+    return;
+  }
+
+  // /status — verifica registrazione
+  if (text === '/status' || text === '/stato') {
+    const links = loadLinks();
+    const isAdmin = links['__admin__'] && links['__admin__'].chatId === chatId;
+    const myEntry = links[String(chatId)];
+    const notif = myEntry && myEntry.notificationsEnabled === true ? '🔔 Attive' : '🔕 Disattive';
+    const pending = isAdmin ? loadRequests().filter(r => r.status === 'pending').length : null;
+    const total = isAdmin ? loadRequests().length : null;
+    await tgSend(chatId,
+      '📊 <b>Il tuo stato</b>\n\n' +
+      `👤 Account: <b>${escapeHtml(userName)}</b>\n` +
+      `🆔 Chat ID: <code>${chatId}</code>\n` +
+      `${isAdmin ? '👑 <b>Amministratore registrato</b>' : '👤 Utente normale'}\n` +
+      `🔔 Notifiche turno: <b>${notif}</b>\n` +
+      (isAdmin ? `\n📬 Richieste pending: <b>${pending}</b> / ${total} totali\n` : '')
+    );
     return;
   }
 
@@ -486,22 +511,43 @@ async function handleTelegramUpdate(update) {
 
     // Inoltra all'admin
     const adminChatId = getAdminChatId();
+    const APP_URL = process.env.APP_URL || 'https://amatriciana.onrender.com';
     if (adminChatId) {
       const summary =
-        '📬 <b>Nuova richiesta matrice</b>\n\n' +
-        `👤 Telegram: <b>${escapeHtml(userName)}</b> (chat <code>${chatId}</code>)\n` +
-        `📝 Nome: <b>${escapeHtml(request.nome)}</b>\n` +
-        `👔 Ruolo: <b>${request.ruolo}</b>\n` +
-        `🏷 Team: <b>${request.team}</b>\n` +
-        `🏢 Rientro: <b>${escapeHtml(request.rientro)}</b>\n` +
-        `🆔 Richiesta: <code>${requestId}</code>\n\n` +
-        '📸 Screenshot in arrivo...';
-      try { await tgSend(adminChatId, summary); } catch (e) { console.warn('forward to admin failed', e.message); }
+        '🚨 <b>NUOVA RICHIESTA MATRICE</b>\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+        `📝 <b>${escapeHtml(request.nome)}</b>\n` +
+        `👔 ${request.ruolo === 'tutor' ? 'Tutor' : 'Dipendente'}  ·  🏷 Team ${request.team}\n` +
+        `🏢 Rientro: <b>${escapeHtml(request.rientro)}</b>\n\n` +
+        `👤 Telegram: <b>${escapeHtml(userName)}</b>\n` +
+        `🆔 <code>${requestId}</code>\n\n` +
+        '📸 Screenshot in arrivo qui sotto...';
+      try {
+        await tgRequest('sendMessage', {
+          chat_id: adminChatId,
+          text: summary,
+          parse_mode: 'HTML',
+          disable_notification: false,
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '📱 Apri nell\'app admin', url: APP_URL + '/?request=' + requestId }
+            ]]
+          }
+        });
+      } catch (e) { console.warn('forward to admin failed', e.message); }
       for (let i = 0; i < request.photos.length; i++) {
-        try { await tgForwardPhoto(adminChatId, request.photos[i], `Settimana ${i+1} di 2 — ${escapeHtml(request.nome)}`); } catch (e) { console.warn('forward photo', i, e.message); }
+        try { await tgForwardPhoto(adminChatId, request.photos[i], `📸 Settimana ${i+1} di ${request.photos.length} — ${escapeHtml(request.nome)}`); } catch (e) { console.warn('forward photo', i, e.message); }
       }
     } else {
       console.warn('No admin chat registered — request', requestId, 'saved but not forwarded');
+      // Avvisa il richiedente in modo che possa segnalare al manager
+      try {
+        await tgSend(chatId,
+          '⚠️ Attenzione: l\'amministratore non è ancora registrato sul bot.\n' +
+          'La tua richiesta è salvata. Contatta direttamente il tuo amministratore di team e digli di mandare al bot:\n' +
+          '<code>/admin la-sua-password</code>'
+        );
+      } catch{}
     }
     return;
   }
