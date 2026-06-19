@@ -292,6 +292,39 @@
     </div>
   </div>
 
+  <!-- Modal Approvazione richiesta: link editabile + opzioni -->
+  <div class="confirm-overlay" id="approveRequestOverlay" role="dialog" aria-modal="true">
+    <div class="confirm-box" style="max-width:520px;">
+      <div class="confirm-title"><i class="fa-solid fa-check-circle" style="color:var(--ok);margin-right:8px;"></i>Matrice creata</div>
+      <div class="confirm-msg" id="approveRequestSub">Conferma le informazioni e invia la notifica all'utente.</div>
+
+      <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;">Link permanente della matrice</label>
+      <textarea id="approveRequestLink" rows="3" placeholder="https://amatriciana.onrender.com/#share=..." style="width:100%;padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);color:var(--text);font-family:monospace;font-size:11px;resize:vertical;box-sizing:border-box;word-break:break-all;"></textarea>
+      <div id="approveRequestSuggestRow" style="display:none;margin-top:6px;font-size:11px;">
+        <button type="button" id="approveRequestSuggestBtn" style="background:rgba(0,102,204,0.10);border:1px solid rgba(0,102,204,0.25);color:var(--accent);padding:5px 10px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;">
+          <i class="fa-solid fa-wand-magic-sparkles" style="margin-right:4px;"></i>Usa link suggerito dal database
+        </button>
+        <span style="color:var(--muted);margin-left:8px;">collega trovato nel team</span>
+      </div>
+
+      <label style="display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 0 6px;">Messaggio personalizzato (opzionale)</label>
+      <textarea id="approveRequestMessage" rows="2" placeholder="Es. Buongiorno, ecco la tua matrice..." style="width:100%;padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);color:var(--text);font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+
+      <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px;font-weight:700;cursor:pointer;padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);">
+        <input type="checkbox" id="approveRequestProposeNotif" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0;" />
+        <div>
+          <div>Proponi all'utente le <strong>notifiche giornaliere</strong></div>
+          <div style="font-size:11px;font-weight:500;color:var(--muted);margin-top:2px;">L'utente potrà accettare o rifiutare con un tap dal bot</div>
+        </div>
+      </label>
+
+      <div class="confirm-buttons" style="margin-top:18px;">
+        <button type="button" class="confirm-btn-cancel" id="approveRequestCancel">Annulla</button>
+        <button type="button" class="confirm-btn-confirm" id="approveRequestOk" style="background:var(--ok);"><i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i>Invia all'utente</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Prompt messaggio (per needs_info / reject) -->
   <div class="confirm-overlay" id="messagePromptOverlay" role="dialog" aria-modal="true">
     <div class="confirm-box" style="max-width:440px;">
@@ -6393,25 +6426,76 @@ function buildHolidayMapForYear(year){
       } catch(e){ toast('Errore', e.message, 'error'); return null; }
     }
 
-    async function handleRequestAction(r, action){
-      if(action === 'approve'){
-        const ok = await customConfirm(
-          `Confermi che la matrice di ${r.nome} è pronta? L'utente riceverà la notifica via Telegram.`,
-          { title: 'Matrice creata', confirmText: 'Conferma e notifica', danger: false }
-        );
-        if(!ok) return;
-        // Trova il collega corrispondente nella state per generare link permanente
-        let link = '';
-        const matched = state.colleghi.find(c => (c.name||'').toLowerCase() === r.nome.toLowerCase());
+    function promptApprove(r){
+      return new Promise(resolve => {
+        const overlay = document.getElementById('approveRequestOverlay');
+        const subEl = document.getElementById('approveRequestSub');
+        const linkEl = document.getElementById('approveRequestLink');
+        const msgEl = document.getElementById('approveRequestMessage');
+        const notifEl = document.getElementById('approveRequestProposeNotif');
+        const suggestRow = document.getElementById('approveRequestSuggestRow');
+        const suggestBtn = document.getElementById('approveRequestSuggestBtn');
+        const okBtn = document.getElementById('approveRequestOk');
+        const cancelBtn = document.getElementById('approveRequestCancel');
+
+        subEl.textContent = 'Stai approvando la richiesta di ' + r.nome + '. Inserisci il link della matrice da inviare.';
+        linkEl.value = '';
+        msgEl.value = '';
+        notifEl.checked = true;
+
+        // Smart suggestion: cerca collega nel db con stesso nome
+        let suggestedLink = '';
+        const matched = state.colleghi.find(c => (c.name||'').toLowerCase().trim() === r.nome.toLowerCase().trim());
         if(matched && matched.startWeekISO && matched.anchorPatternIndex !== null){
           const payload = {
             n: matched.name, r: matched.role, d: matched.durationKey, dm: matched.durationMinutes,
             w: matched.startWeekISO, a: matched.anchorPatternIndex, t: matched.team || null
           };
           const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-          link = window.location.origin + window.location.pathname + '#share=' + b64;
+          suggestedLink = window.location.origin + window.location.pathname + '#share=' + b64;
         }
-        const result = await callRequestAction(r.id, 'approve', { link });
+        if(suggestedLink){
+          suggestRow.style.display = '';
+          suggestBtn.onclick = ()=>{ linkEl.value = suggestedLink; };
+        } else {
+          suggestRow.style.display = 'none';
+        }
+
+        overlay.classList.add('open');
+        setTimeout(()=>linkEl.focus(), 50);
+        function close(){
+          overlay.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+        }
+        function onOk(){
+          const link = linkEl.value.trim();
+          const message = msgEl.value.trim();
+          const proposeNotifications = notifEl.checked;
+          close();
+          resolve({ link, message, proposeNotifications });
+        }
+        function onCancel(){ close(); resolve(null); }
+        function onOverlay(e){ if(e.target===overlay){ close(); resolve(null); } }
+        function onKey(e){ if(e.key==='Escape'){ close(); resolve(null); } }
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+      });
+    }
+
+    async function handleRequestAction(r, action){
+      if(action === 'approve'){
+        const opts = await promptApprove(r);
+        if(!opts) return;
+        const result = await callRequestAction(r.id, 'approve', {
+          link: opts.link,
+          message: opts.message,
+          proposeNotifications: opts.proposeNotifications
+        });
         if(result && result.ok){
           closeModal('requestDetailModal');
           refreshRichieste();

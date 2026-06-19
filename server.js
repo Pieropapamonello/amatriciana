@@ -265,6 +265,42 @@ function removeKeyboard() {
 }
 
 async function handleTelegramUpdate(update) {
+  // === CALLBACK QUERIES (inline keyboard) ===
+  if (update.callback_query) {
+    const cq = update.callback_query;
+    const data = cq.data || '';
+    const chatIdCb = cq.message && cq.message.chat ? cq.message.chat.id : null;
+    if (!chatIdCb) return;
+    if (data === 'notif_on' || data === 'notif_off') {
+      const enabled = data === 'notif_on';
+      const links = loadLinks();
+      const k = String(chatIdCb);
+      if (!links[k]) links[k] = { chatId: chatIdCb, linkedAt: new Date().toISOString(), name: cq.from.first_name || '' };
+      links[k].notificationsEnabled = enabled;
+      saveLinks(links);
+      // Risposta callback (toast nel client TG)
+      try {
+        await tgRequest('answerCallbackQuery', {
+          callback_query_id: cq.id,
+          text: enabled ? '✅ Notifiche attivate!' : '🔕 Notifiche disattivate',
+          show_alert: false
+        });
+      } catch {}
+      // Edita il messaggio originale per confermare
+      try {
+        await tgRequest('editMessageText', {
+          chat_id: chatIdCb,
+          message_id: cq.message.message_id,
+          parse_mode: 'HTML',
+          text: enabled
+            ? '🔔 <b>Notifiche attive!</b>\n\nOgni sera dopo le 18:00 riceverai un messaggio col turno del giorno dopo.\n\nPuoi disattivarle quando vuoi con /notifiche.'
+            : '🔕 <b>Notifiche disattivate.</b>\n\nPuoi riattivarle in qualsiasi momento con /notifiche.'
+        });
+      } catch {}
+    }
+    return;
+  }
+
   const msg = update.message;
   if (!msg) return;
   const chatId = msg.chat.id;
@@ -305,10 +341,31 @@ async function handleTelegramUpdate(update) {
       '👋 <b>Benvenuto in Matrice Orari Bot</b>\n\n' +
       'Comandi disponibili:\n' +
       '📋 <b>Richiedi la mia matrice</b> — chiedi all\'amministratore di crearti la matrice turni\n' +
+      '🔔 /notifiche — attiva o disattiva le notifiche serali\n' +
       'ℹ️ <b>Aiuto</b> — mostra questo messaggio\n' +
       '❌ <b>Annulla</b> — interrompi una richiesta in corso',
       mainMenuKeyboard()
     );
+    return;
+  }
+
+  // /notifiche — toggle notifiche giornaliere
+  if (text === '/notifiche' || text === '/notifications') {
+    const links = loadLinks();
+    const k = String(chatId);
+    const cur = links[k] && links[k].notificationsEnabled === true;
+    await tgRequest('sendMessage', {
+      chat_id: chatId,
+      parse_mode: 'HTML',
+      text: cur
+        ? '🔔 Le notifiche serali sono <b>attive</b>.\n\nVuoi disattivarle?'
+        : '🔕 Le notifiche serali sono <b>disattive</b>.\n\nVuoi attivarle?',
+      reply_markup: {
+        inline_keyboard: [[
+          cur ? { text: '🔕 Disattiva', callback_data: 'notif_off' } : { text: '🔔 Attiva', callback_data: 'notif_on' }
+        ]]
+      }
+    });
     return;
   }
 
@@ -654,9 +711,19 @@ Se ricevi più immagini, fondi i risultati in UN UNICO array "giorni" ordinato p
     if (action === 'approve') {
       r.status = 'approved';
       r.awaitingReply = false;
-      userMessage = '✅ <b>Matrice creata!</b>\n\nLa tua matrice turni è ora disponibile. ' +
-        (body.link ? '\n\n🔗 Link permanente:\n' + body.link : 'Aprila dall\'app o usa il menu del bot.') +
-        '\n\nDa ora riceverai ogni sera il turno del giorno dopo.';
+      const customMsg = body.message ? '\n\n' + body.message : '';
+      const linkBlock = body.link ? '\n\n🔗 <b>Link della tua matrice:</b>\n' + body.link : '\n\nL\'amministratore ti invierà a breve il link della matrice.';
+      userMessage = '✅ <b>Matrice creata!</b>\n\nLa tua matrice turni è ora disponibile.' + linkBlock + customMsg;
+      // Reset notifications: default OFF, l'utente sceglie con inline keyboard
+      const userChatId = r.from && r.from.chatId;
+      if (userChatId) {
+        const linksRef = loadLinks();
+        const userKey = String(userChatId);
+        if (linksRef[userKey]) {
+          linksRef[userKey].notificationsEnabled = false;
+          saveLinks(linksRef);
+        }
+      }
     } else if (action === 'reject') {
       r.status = 'rejected';
       r.awaitingReply = false;
@@ -679,8 +746,23 @@ Se ricevi più immagini, fondi i risultati in UN UNICO array "giorni" ordinato p
     saveRequests(requests);
     // Notifica utente via Telegram
     if (chatId && userMessage) {
-      try { await tgSend(chatId, userMessage); }
-      catch (e) { console.warn('notify user failed', e.message); }
+      try {
+        await tgSend(chatId, userMessage);
+        // Se admin ha chiesto di proporre notifiche, manda inline keyboard separata
+        if (action === 'approve' && body.proposeNotifications) {
+          await tgRequest('sendMessage', {
+            chat_id: chatId,
+            text: '🔔 <b>Vuoi ricevere ogni sera il turno del giorno dopo?</b>\n\nPotrai cambiare idea in qualsiasi momento.',
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '🔔 Sì, attiva notifiche', callback_data: 'notif_on' },
+                { text: '🔕 No grazie', callback_data: 'notif_off' }
+              ]]
+            }
+          });
+        }
+      } catch (e) { console.warn('notify user failed', e.message); }
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ ok: true, request: r }));
@@ -714,11 +796,16 @@ Se ricevi più immagini, fondi i risultati in UN UNICO array "giorni" ordinato p
 
   if (req.url === '/api/telegram/send' && req.method === 'POST') {
     const body = await readBody(req);
-    const { code, text } = body;
+    const { code, text, force } = body;
     if (!code || !text) { res.writeHead(400); return res.end(JSON.stringify({ error: 'missing code/text' })); }
     const links = loadLinks();
     const link = links[code];
     if (!link) { res.writeHead(404); return res.end(JSON.stringify({ error: 'not linked' })); }
+    // Rispetta opt-out: blocca daily reminders se l'utente non ha attivato notifiche
+    if (!force && link.notificationsEnabled !== true) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, reason: 'notifications_disabled' }));
+    }
     try {
       await tgRequest('sendMessage', { chat_id: link.chatId, text, parse_mode: 'HTML' });
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -760,6 +847,9 @@ setInterval(async () => {
     _lastReminderDay = dayKey;
     const links = loadLinks();
     for (const [code, link] of Object.entries(links)) {
+      // Solo se l'utente ha opt-in attivamente
+      if (code === '__admin__') continue;
+      if (link.notificationsEnabled !== true) continue;
       try {
         await tgRequest('sendMessage', {
           chat_id: link.chatId,
