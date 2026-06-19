@@ -818,20 +818,20 @@
         </div>
         <!-- Drop zone -->
         <div id="scanDropZone" class="scan-drop">
-          <input type="file" id="scanFileInput" accept="image/*" style="display:none;" />
+          <input type="file" id="scanFileInput" accept="image/*" multiple style="display:none;" />
           <input type="file" id="scanCameraInput" accept="image/*" capture="environment" style="display:none;" />
-          <i class="fa-solid fa-image" style="font-size:30px;color:var(--accent);margin-bottom:10px;display:block;"></i>
-          <div style="font-weight:800;font-size:14px;">Carica la foto del turno</div>
-          <div style="font-size:12px;opacity:0.5;margin-top:4px;">Trascina qui oppure scegli</div>
+          <i class="fa-solid fa-images" style="font-size:30px;color:var(--accent);margin-bottom:10px;display:block;"></i>
+          <div style="font-weight:800;font-size:14px;">Carica 1-3 foto della settimana</div>
+          <div style="font-size:12px;opacity:0.5;margin-top:4px;">Più foto = più precisione. Trascina o scegli.</div>
           <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
             <button type="button" id="scanGalleryBtn" onclick="event.stopPropagation();document.getElementById('scanFileInput').click();" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:20px;border:1.5px solid var(--stroke);background:var(--bg);font-size:12px;font-weight:800;color:var(--text);cursor:pointer;"><i class="fa-solid fa-folder-open" style="color:var(--accent);"></i>Galleria</button>
             <button type="button" id="scanCameraBtn" onclick="event.stopPropagation();document.getElementById('scanCameraInput').click();" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:20px;border:1.5px solid var(--stroke);background:var(--bg);font-size:12px;font-weight:800;color:var(--text);cursor:pointer;"><i class="fa-solid fa-camera" style="color:var(--accent);"></i>Fotocamera</button>
           </div>
         </div>
-        <!-- Preview -->
-        <div id="scanPreviewWrap" style="display:none;margin-top:10px;position:relative;">
-          <img id="scanPreview" style="width:100%;border-radius:12px;max-height:260px;object-fit:contain;background:#f1f5f9;" />
-          <button type="button" id="scanRemoveImg" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#fff;font-size:13px;line-height:28px;text-align:center;">✕</button>
+        <!-- Preview multi-immagine -->
+        <div id="scanPreviewWrap" style="display:none;margin-top:10px;">
+          <div id="scanPreviewGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;"></div>
+          <button type="button" id="scanAddMoreBtn" onclick="event.stopPropagation();document.getElementById('scanFileInput').click();" style="margin-top:8px;width:100%;padding:8px;border-radius:10px;border:1.5px dashed var(--stroke);background:var(--ctrl-bg);font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;"><i class="fa-solid fa-plus"></i> Aggiungi un'altra foto</button>
         </div>
       </div>
       <div class="modal-actions" style="flex-direction:column;gap:8px;padding-top:12px;">
@@ -4208,17 +4208,47 @@ function buildHolidayMapForYear(year){
         _updateKeyUI();
       });
 
-      let _scanFile = null;
+      let _scanFiles = [];
       let _scanResult = null;
+      let _scanGiorni = null;
 
       function resetScan(){
-        _scanFile = null; _scanResult = null;
+        _scanFiles = []; _scanResult = null; _scanGiorni = null;
         document.getElementById('scanPreviewWrap').style.display = 'none';
-        document.getElementById('scanPreview').src = '';
+        document.getElementById('scanPreviewGrid').innerHTML = '';
         document.getElementById('scanAnalyzeBtn').disabled = true;
         document.getElementById('scanResultWrap').style.display = 'none';
         document.getElementById('scanResultWrap').innerHTML = '';
         document.getElementById('scanApplyBtn').style.display = 'none';
+      }
+
+      function renderPreviewGrid(){
+        const grid = document.getElementById('scanPreviewGrid');
+        grid.innerHTML = '';
+        _scanFiles.forEach((f, idx) => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;background:var(--ctrl-bg);';
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(f);
+          img.style.cssText = 'width:100%;display:block;aspect-ratio:1.2/1;object-fit:cover;';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.innerHTML = '✕';
+          btn.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.65);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;color:#fff;font-size:11px;line-height:24px;';
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            _scanFiles.splice(idx, 1);
+            renderPreviewGrid();
+            if(!_scanFiles.length){ resetScan(); return; }
+          });
+          const label = document.createElement('div');
+          label.textContent = String(idx+1);
+          label.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;';
+          wrap.appendChild(img); wrap.appendChild(btn); wrap.appendChild(label);
+          grid.appendChild(wrap);
+        });
+        document.getElementById('scanPreviewWrap').style.display = _scanFiles.length ? '' : 'none';
+        document.getElementById('scanAnalyzeBtn').disabled = !_scanFiles.length;
       }
 
       const dropZone = document.getElementById('scanDropZone');
@@ -4230,39 +4260,44 @@ function buildHolidayMapForYear(year){
       dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
       dropZone.addEventListener('drop', e=>{
         e.preventDefault(); dropZone.classList.remove('drag-over');
-        const f = e.dataTransfer.files[0];
-        if(f && f.type.startsWith('image/')) handleFile(f);
+        addFiles(e.dataTransfer.files);
       });
       fileInput.addEventListener('change', ()=>{
-        if(fileInput.files[0]) handleFile(fileInput.files[0]);
+        addFiles(fileInput.files);
         fileInput.value = '';
       });
       cameraInput.addEventListener('change', ()=>{
-        if(cameraInput.files[0]) handleFile(cameraInput.files[0]);
+        addFiles(cameraInput.files);
         cameraInput.value = '';
       });
-      document.getElementById('scanRemoveImg').addEventListener('click', e=>{ e.stopPropagation(); resetScan(); });
 
-      function handleFile(file){
-        _scanFile = file;
-        document.getElementById('scanPreview').src = URL.createObjectURL(file);
-        document.getElementById('scanPreviewWrap').style.display = '';
-        document.getElementById('scanAnalyzeBtn').disabled = false;
+      function addFiles(fileList){
+        for(let i=0; i<fileList.length && _scanFiles.length < 3; i++){
+          const f = fileList[i];
+          if(f && f.type.startsWith('image/')) _scanFiles.push(f);
+        }
+        if(_scanFiles.length > 3){
+          toast('Massimo 3 foto', 'Hai raggiunto il limite per analisi.', 'warning');
+          _scanFiles = _scanFiles.slice(0,3);
+        }
+        renderPreviewGrid();
         document.getElementById('scanResultWrap').style.display = 'none';
         document.getElementById('scanApplyBtn').style.display = 'none';
       }
 
       document.getElementById('scanAnalyzeBtn').addEventListener('click', async ()=>{
-        if(!_scanFile){ toast('Attenzione', "Carica prima un'immagine."); return; }
+        if(!_scanFiles.length){ toast('Attenzione', "Carica almeno una foto.", 'warning'); return; }
         const btn = document.getElementById('scanAnalyzeBtn');
         const oldHtml = btn.innerHTML;
         btn.disabled = true;
         try{
-          const extracted = await analyzeWithOCR(_scanFile, _scanRole, (pct)=>{
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right:7px;"></i>Lettura immagine ${pct}%...`;
+          const extracted = await analyzeWithOCR(_scanFiles, _scanRole, (pct)=>{
+            const stage = pct < 30 ? 'Preparazione' : pct < 80 ? 'Analisi AI' : 'Risultato';
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right:7px;"></i>${stage} ${pct}%...`;
           });
-          _scanResult = matchScheduleToPattern(extracted.giorni || [], _scanRole);
-          showScanResult(_scanResult, extracted.giorni || [], extracted.weekLabel || '', extracted._debug || null);
+          _scanGiorni = extracted.giorni || [];
+          _scanResult = matchScheduleToPattern(_scanGiorni, _scanRole);
+          showScanResult(_scanResult, _scanGiorni, extracted.weekLabel || '', extracted._debug || null);
         } catch(err){
           const wrap = document.getElementById('scanResultWrap');
           wrap.style.display = '';
@@ -4299,17 +4334,80 @@ function buildHolidayMapForYear(year){
       });
     }
 
-    async function analyzeWithGemini(imageFile, role, onProgress){
-      if(onProgress) onProgress(10);
-      const b64 = await fileToBase64(imageFile);
-      if(onProgress) onProgress(30);
+    // Preprocessa immagine: ridimensiona, comprimi, gestisci EXIF rotation
+    async function preprocessImage(file, maxSize){
+      maxSize = maxSize || 1600;
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          let { naturalWidth: w, naturalHeight: h } = img;
+          const scale = Math.min(1, maxSize / Math.max(w, h));
+          w = Math.round(w * scale); h = Math.round(h * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => {
+            if(!blob) return reject(new Error('Compression failed'));
+            const reader = new FileReader();
+            reader.onload = () => {
+              const s = reader.result.toString();
+              resolve({ base64: s.substring(s.indexOf(',')+1), mime: 'image/jpeg', width: w, height: h });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', 0.85);
+        };
+        img.onerror = () => reject(new Error('Cannot load image'));
+        const reader = new FileReader();
+        reader.onload = () => { img.src = reader.result; };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Italian month names → numero
+    const MESI_MAP = {
+      gen:0, genn:0, gennaio:0, jan:0, january:0,
+      feb:1, febb:1, febbraio:1, february:1,
+      mar:2, marzo:2, march:2,
+      apr:3, aprile:3, april:3,
+      mag:4, mai:4, maggio:4, may:4,
+      giu:5, giugno:5, jun:5, june:5,
+      lug:6, luglio:6, jul:6, july:6,
+      ago:7, agosto:7, aug:7, august:7,
+      set:8, sett:8, settembre:8, sep:8, september:8,
+      ott:9, ottobre:9, oct:9, october:9,
+      nov:10, novembre:10, november:10,
+      dic:11, dicembre:11, dec:11, december:11
+    };
+    function parseMese(s){
+      if(s === undefined || s === null) return null;
+      const k = String(s).toLowerCase().trim();
+      return MESI_MAP[k] !== undefined ? MESI_MAP[k] : null;
+    }
+
+    async function analyzeWithGemini(imageFiles, role, onProgress){
+      const files = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+      if(onProgress) onProgress(5);
+      const images = [];
+      for(let i=0; i<files.length; i++){
+        const pre = await preprocessImage(files[i]);
+        images.push({ base64: pre.base64, mime: pre.mime });
+        if(onProgress) onProgress(5 + Math.round((i+1)/files.length * 25));
+      }
+      if(onProgress) onProgress(35);
       const resp = await fetch('/api/gemini-vision', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ imageBase64: b64, mimeType: imageFile.type || 'image/jpeg', role })
+        body: JSON.stringify({ images, role })
       });
       if(onProgress) onProgress(85);
-      if(!resp.ok) throw new Error('Gemini non disponibile');
+      if(!resp.ok){
+        let err = 'Gemini non disponibile';
+        try { const j = await resp.json(); err = j.error || err; } catch{}
+        throw new Error(err);
+      }
       const text = await resp.text();
       let parsed;
       try { parsed = JSON.parse(text); } catch { throw new Error('Risposta Gemini non valida'); }
@@ -4318,40 +4416,82 @@ function buildHolidayMapForYear(year){
       const DOW_MAP = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
       const DOW_IT = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
       const now = new Date();
-      let baseYr = now.getFullYear(), baseMo = now.getMonth();
       const rawGiorni = (parsed.giorni || []).filter(g => Number.isFinite(Number(g.data)));
-      const nums = rawGiorni.map(g => Number(g.data)).sort((a,b)=>a-b);
-      for(let off=0; off<=4; off++){
-        const d0 = new Date(now.getFullYear(), now.getMonth()-off, 1);
-        const dim = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate();
-        if(nums.every(n => n <= dim + 6)){ baseYr = d0.getFullYear(); baseMo = d0.getMonth(); break; }
+
+      // Determina anno/mese di riferimento: priorità a info Gemini, poi inferenza
+      let baseYr = null, baseMo = null;
+      for(const g of rawGiorni){
+        const m = parseMese(g.mese);
+        const y = Number.isFinite(Number(g.anno)) ? Number(g.anno) : null;
+        if(m !== null){ baseMo = m; if(y) baseYr = y; break; }
       }
+      if(baseMo === null){
+        // Fallback: trova mese in cui tutti i numeri stanno in [1, dim+6]
+        const nums = rawGiorni.map(g => Number(g.data));
+        const minN = Math.min(...nums);
+        // Cerca da -3 mesi a +1 mese rispetto a oggi
+        for(let off=-3; off<=1; off++){
+          const d0 = new Date(now.getFullYear(), now.getMonth()+off, 1);
+          const dim = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate();
+          // i numeri dovrebbero stare in [minN..minN+6]
+          if(minN <= dim && minN >= 1 && nums.every(n => n >= 1 && n <= 31)){
+            baseYr = d0.getFullYear(); baseMo = d0.getMonth(); break;
+          }
+        }
+        if(baseMo === null){ baseYr = now.getFullYear(); baseMo = now.getMonth(); }
+      }
+      if(baseYr === null) baseYr = now.getFullYear();
+
+      // Confidence aggregata
+      const confs = rawGiorni.map(g => Number(g.confidence) || 0).filter(c => c > 0);
+      const avgConf = confs.length ? confs.reduce((a,b)=>a+b,0)/confs.length : (parsed.confidenceGlobale || 0.7);
+
       const giorniByDow = {};
+      const dayDetails = []; // per UI di correzione
       rawGiorni.forEach(g => {
         const n = Number(g.data);
-        const dim = new Date(baseYr, baseMo+1, 0).getDate();
         let actYr = baseYr, actMo = baseMo;
+        // Se Gemini ha indicato mese/anno specifici per questo giorno, usali
+        const gMese = parseMese(g.mese);
+        if(gMese !== null) actMo = gMese;
+        if(Number.isFinite(Number(g.anno))) actYr = Number(g.anno);
+        // Gestione cross-month: se il numero sembra del mese successivo
+        const dim = new Date(actYr, actMo+1, 0).getDate();
         if(n > dim){ actMo++; if(actMo>11){ actMo=0; actYr++; } }
-        const dow = DOW_MAP[new Date(actYr, actMo, n).getDay()];
-        const isRest = String(g.inizio||'').toUpperCase().includes('RIPOSO');
-        giorniByDow[dow] = isRest
-          ? { giorno: dow, riposo: true }
-          : { giorno: dow, riposo: false, inizio: String(g.inizio||'').trim(), fine: '00:00' };
+        const dt = new Date(actYr, actMo, n);
+        const dow = DOW_MAP[dt.getDay()];
+        const inizioStr = String(g.inizio||'').trim();
+        const isRest = /^(riposo|libero|off|—|-)/i.test(inizioStr);
+        const conf = Number(g.confidence) || avgConf;
+        if(isRest){
+          giorniByDow[dow] = { giorno: dow, riposo: true };
+          dayDetails.push({ giorno: dow, data: n, mese: actMo+1, riposo: true, inizio: '', confidence: conf });
+        } else {
+          giorniByDow[dow] = { giorno: dow, riposo: false, inizio: inizioStr, fine: '00:00' };
+          dayDetails.push({ giorno: dow, data: n, mese: actMo+1, riposo: false, inizio: inizioStr, confidence: conf });
+        }
       });
-      const giorni = DOW_IT.map(d => giorniByDow[d] || { giorno: d, riposo: false, inizio: '', fine: '' });
-      return { giorni, weekLabel: parsed.weekLabel || '', _debug: { source: 'gemini', raw: parsed } };
+      const giorni = DOW_IT.map(d => giorniByDow[d] || { giorno: d, riposo: false, inizio: '', fine: '', _missing: true });
+      return {
+        giorni,
+        weekLabel: parsed.weekLabel || '',
+        _debug: { source: 'gemini', raw: parsed, dayDetails, avgConf, noteOCR: parsed.noteOCR || '' }
+      };
     }
 
     async function analyzeWithOCR(imageFile, role, onProgress){
+      const files = Array.isArray(imageFile) ? imageFile : [imageFile];
       try {
         const info = await fetch('/api/gemini-key').then(r=>r.json());
         if(info.enabled){
-          try { return await analyzeWithGemini(imageFile, role, onProgress); }
-          catch(e){ console.warn('Gemini fallito, fallback Tesseract:', e.message); }
+          try { return await analyzeWithGemini(files, role, onProgress); }
+          catch(e){ console.warn('Gemini fallito, fallback Tesseract:', e.message); toast('Fallback OCR', 'Gemini ha fallito, uso Tesseract (più lento).', 'warning'); }
         }
       } catch{}
       if(typeof Tesseract === 'undefined') throw new Error('OCR non disponibile.');
-      const { data } = await Tesseract.recognize(imageFile, 'ita+eng', {
+      // Tesseract usa solo la prima immagine
+      const imageFile0 = files[0];
+      const { data } = await Tesseract.recognize(imageFile0, 'ita+eng', {
         logger: m => {
           if(m.status === 'recognizing text' && onProgress)
             onProgress(Math.round(m.progress * 100));
@@ -4522,38 +4662,92 @@ function buildHolidayMapForYear(year){
       const pattern = role==='tutor' ? TUTOR_PATTERN : DIPENDENTE_PATTERN;
       const entry = pattern[anchorIndex];
       const DOW_IT = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-      const giorniHtml = DOW_IT.map(d => {
+      const ORARI_VALIDI = ['06:00','07:00','08:00','08:30','09:00','09:30','10:00','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','17:00','18:00'];
+      const dayDetails = (_debug && _debug.dayDetails) || [];
+      const detailByDow = {};
+      dayDetails.forEach(d => { detailByDow[d.giorno] = d; });
+      const avgConf = _debug && _debug.avgConf ? Math.round(_debug.avgConf * 100) : null;
+      const noteOCR = _debug && _debug.noteOCR;
+
+      // Confidence badge color
+      const confColor = c => c >= 0.85 ? 'var(--ok)' : c >= 0.65 ? 'var(--warn)' : 'var(--danger)';
+      const confLabel = c => c >= 0.85 ? 'Alta' : c >= 0.65 ? 'Media' : 'Bassa';
+
+      // Costruisce select orari + Riposo
+      const buildOptions = (selValue) => {
+        const opts = ['<option value="riposo"' + (selValue==='riposo'?' selected':'') + '>🔴 Riposo</option>'];
+        ORARI_VALIDI.forEach(t => {
+          opts.push('<option value="'+t+'"' + (selValue===t?' selected':'') + '>'+t+'</option>');
+        });
+        if(selValue && selValue !== 'riposo' && !ORARI_VALIDI.includes(selValue)){
+          opts.unshift('<option value="'+selValue+'" selected>'+escapeHtml(selValue)+' (custom)</option>');
+        }
+        return opts.join('');
+      };
+
+      const giorniRows = DOW_IT.map(d => {
         const g = giorni.find(x=>x.giorno===d);
-        if(!g) return `<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:var(--ctrl-bg);opacity:0.4;">${d}<br>—</div>`;
-        if(g.riposo) return `<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:rgba(239,68,68,0.07);color:#ef4444;font-weight:700;">${d}<br>Riposo</div>`;
-        return `<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:rgba(0,102,204,0.06);font-weight:700;">${d}<br>${escapeHtml(g.inizio||'')}</div>`;
+        const det = detailByDow[d];
+        const conf = det && det.confidence ? det.confidence : 0;
+        const dateNum = det && det.data ? det.data : '';
+        const isMissing = !g || g._missing;
+        const selValue = isMissing ? '' : (g.riposo ? 'riposo' : (g.inizio || ''));
+        const confBadge = isMissing
+          ? '<span style="font-size:9px;color:var(--muted);padding:2px 6px;border-radius:4px;background:var(--ctrl-bg);">non rilevato</span>'
+          : (conf > 0 ? `<span style="font-size:9px;color:${confColor(conf)};padding:2px 6px;border-radius:4px;background:${confColor(conf)}1a;font-weight:700;">${Math.round(conf*100)}%</span>` : '');
+        return `<div class="scan-day-row" style="display:grid;grid-template-columns:60px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--stroke);">
+          <div>
+            <div style="font-weight:800;font-size:12px;">${d}</div>
+            ${dateNum ? `<div style="font-size:10px;color:var(--muted);">${dateNum}</div>` : ''}
+          </div>
+          <select class="scan-day-select" data-dow="${d}" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--stroke);background:var(--card);color:var(--text);font-size:12px;font-weight:700;">
+            <option value="">— vuoto —</option>
+            ${buildOptions(selValue)}
+          </select>
+          ${confBadge}
+        </div>`;
       }).join('');
+
       const roleLabel = role==='tutor'?'Tutor':'Dipendente';
-      const weekRow = weekLabel ? `<div style="font-size:11px;font-weight:700;opacity:0.55;margin-bottom:8px;"><i class="fa-solid fa-calendar-week" style="margin-right:5px;"></i>${escapeHtml(weekLabel)}</div>` : '';
-      const html = `<div style="border:1.5px solid rgba(0,102,204,0.20);border-radius:14px;padding:14px;background:rgba(0,102,204,0.04);">
-        <div style="font-size:10px;font-weight:900;opacity:0.45;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Turno rilevato</div>
+      const weekRow = weekLabel ? `<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;"><i class="fa-solid fa-calendar-week" style="margin-right:5px;"></i>${escapeHtml(weekLabel)}</div>` : '';
+      const confRow = avgConf !== null ? `<div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:${confColor(avgConf/100)}1a;color:${confColor(avgConf/100)};font-size:11px;font-weight:800;margin-bottom:8px;"><i class="fa-solid fa-circle-check"></i> Affidabilità ${confLabel(avgConf/100)} (${avgConf}%)</div>` : '';
+      const noteRow = noteOCR ? `<div style="font-size:11px;color:var(--warn);background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.20);padding:6px 10px;border-radius:6px;margin-bottom:8px;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:5px;"></i>${escapeHtml(noteOCR)}</div>` : '';
+
+      const html = `<div style="border:1.5px solid rgba(0,102,204,0.20);border-radius:14px;padding:14px;background:var(--card);">
+        <div style="font-size:10px;font-weight:900;opacity:0.45;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Risultato OCR</div>
         ${weekRow}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${giorniHtml}</div>
+        ${confRow}
+        ${noteRow}
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Verifica i turni e correggi se serve, poi applica:</div>
+        <div style="background:var(--ctrl-bg);border-radius:8px;overflow:hidden;margin-bottom:10px;">${giorniRows}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:700;">
-          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Ruolo: <strong>${roleLabel}</strong></div>
-          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Opzione: <strong>${anchorIndex+1}</strong></div>
-          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Inizio: <strong>${escapeHtml(entry.startTime)}</strong></div>
-          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Riposi: <strong>${entry.restDays.join(', ')}</strong></div>
+          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Ruolo: <strong id="scanMatchRole">${roleLabel}</strong></div>
+          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Opzione: <strong id="scanMatchOption">${anchorIndex+1}</strong></div>
+          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Inizio: <strong id="scanMatchStart">${escapeHtml(entry.startTime)}</strong></div>
+          <div style="padding:5px 10px;background:var(--ctrl-bg);border-radius:8px;">Riposi: <strong id="scanMatchRest">${entry.restDays.join(', ')}</strong></div>
         </div>
       </div>`;
-      let debugHtml = '';
-      if(_debug){
-        const datesStr = (_debug.dates||[]).map(d=>`<span style="${d.synth?'opacity:0.5;font-style:italic':''}">${d.num}@${d.x}px${d.synth?' (synth)':''}</span>`).join(' · ');
-        const timesStr = (_debug.times||[]).map(t=>`<span>${escapeHtml(t.text)}→col${t.assignedDate}(${t.dist}px)</span>`).join(' · ');
-        const restStr = (_debug.restNums||[]).join(', ') || '—';
-        debugHtml = `<details style="margin-top:10px;"><summary style="font-size:10px;font-weight:900;opacity:0.45;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;">Debug OCR</summary><div style="font-size:10px;line-height:1.7;opacity:0.7;padding-top:6px;word-break:break-all;">
-<div><strong>Date rilevate:</strong> ${datesStr}</div>
-<div><strong>Orari→colonne:</strong> ${timesStr}</div>
-<div><strong>Colonne riposo:</strong> ${restStr}</div>
-</div></details>`;
-      }
       const wrap = document.getElementById('scanResultWrap');
-      wrap.innerHTML = html + debugHtml; wrap.style.display = '';
+      wrap.innerHTML = html; wrap.style.display = '';
+
+      // Bind select per ricomputare match in tempo reale
+      wrap.querySelectorAll('.scan-day-select').forEach(sel => {
+        sel.addEventListener('change', ()=>{
+          const newGiorni = DOW_IT.map(dow => {
+            const s = wrap.querySelector('.scan-day-select[data-dow="'+dow+'"]');
+            const v = s ? s.value : '';
+            if(!v) return { giorno: dow, riposo: false, inizio: '', _missing: true };
+            if(v === 'riposo') return { giorno: dow, riposo: true };
+            return { giorno: dow, riposo: false, inizio: v, fine: '00:00' };
+          });
+          _scanGiorni = newGiorni;
+          _scanResult = matchScheduleToPattern(newGiorni, _scanRole);
+          const newEntry = (_scanRole==='tutor'?TUTOR_PATTERN:DIPENDENTE_PATTERN)[_scanResult.anchorIndex];
+          document.getElementById('scanMatchOption').textContent = _scanResult.anchorIndex+1;
+          document.getElementById('scanMatchStart').textContent = newEntry.startTime;
+          document.getElementById('scanMatchRest').textContent = newEntry.restDays.join(', ');
+        });
+      });
       document.getElementById('scanApplyBtn').style.display = '';
     }
 

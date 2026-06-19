@@ -340,22 +340,49 @@ const server = http.createServer(async (req, res) => {
     const key = process.env.GEMINI_KEY || '';
     if (!key) { res.writeHead(503); return res.end(JSON.stringify({ error: 'Gemini key non configurata' })); }
     const body = await readBody(req);
-    if (!body.imageBase64 || !body.role) { res.writeHead(400); return res.end(JSON.stringify({ error: 'imageBase64 + role richiesti' })); }
-    const prompt = `Sei un OCR specializzato in turni di lavoro. Nell'immagine c'è una settimana lavorativa con date e orari di inizio turno.
-Estrai:
-1. Le 7 date della settimana (numero del giorno, da 1 a 31)
-2. Per ogni giorno, l'orario di inizio turno in formato HH:MM (oppure "RIPOSO" se è giorno libero, o "00:00" se è una colonna lavorativa con orario 0)
+    const images = Array.isArray(body.images) ? body.images : (body.imageBase64 ? [{ base64: body.imageBase64, mime: body.mimeType || 'image/jpeg' }] : []);
+    if (!images.length || !body.role) { res.writeHead(400); return res.end(JSON.stringify({ error: 'images + role richiesti' })); }
+
+    const prompt = `Sei un assistente OCR specializzato nella lettura di tabelle di turni di lavoro italiani.
+Nelle immagini fornite vedi una o più settimane lavorative con date e orari di inizio turno.
+
+REGOLE DI ESTRAZIONE:
+1. Ogni colonna rappresenta un giorno. La riga superiore contiene il NUMERO del giorno (1-31).
+2. Sotto ogni numero, leggi l'ORARIO DI INIZIO turno in formato HH:MM (es. "06:00", "12:00", "18:00").
+3. Se la colonna è VUOTA o contiene parole come "Libero", "Riposo", "OFF", "—": è un giorno di RIPOSO.
+4. Se l'orario è "00:00" o "0.00": è un turno valido che INIZIA a mezzanotte (non riposo).
+5. NON inventare giorni. Estrai SOLO i giorni effettivamente visibili in tabella.
+6. Per ogni giorno indica anche il MESE rilevato se visibile (es. da "Mar 2026" o "Marzo" o "MAR"); altrimenti null.
+7. Per ogni giorno indica un CONFIDENCE da 0.0 a 1.0 sulla certezza della lettura.
+
+OUTPUT JSON RIGOROSO (no markdown, no commenti, no testo prima/dopo):
+{
+  "giorni": [
+    {"data": 23, "mese": "feb", "anno": 2026, "inizio": "08:00", "confidence": 0.95},
+    {"data": 24, "mese": "feb", "anno": 2026, "inizio": "RIPOSO", "confidence": 0.90},
+    {"data": 25, "mese": "feb", "anno": 2026, "inizio": "12:00", "confidence": 0.85}
+  ],
+  "weekLabel": "23 feb – 1 mar 2026",
+  "noteOCR": "breve nota se hai dubbi (max 60 caratteri)",
+  "confidenceGlobale": 0.85
+}
+
+ESEMPI:
+- Se vedi colonna con "27" sopra e "06:00" sotto: {"data": 27, "inizio": "06:00", "confidence": 0.95}
+- Se vedi colonna con "28" sopra e niente sotto: {"data": 28, "inizio": "RIPOSO", "confidence": 0.85}
+- Se vedi "29" e "00:00": {"data": 29, "inizio": "00:00", "confidence": 0.90}
+- Se vedi "30" e "Libero": {"data": 30, "inizio": "RIPOSO", "confidence": 0.95}
+
 Ruolo operatore: ${body.role}.
-Rispondi SOLO con JSON valido in questo formato esatto, senza testo aggiuntivo:
-{"giorni": [{"data": 15, "inizio": "08:00"}, {"data": 16, "inizio": "RIPOSO"}, ...], "weekLabel": "15-21 Mar 2026"}`;
+Italiano = mesi gen, feb, mar, apr, mag, giu, lug, ago, set, ott, nov, dic.
+Se ricevi più immagini, fondi i risultati in UN UNICO array "giorni" ordinato per data.`;
+
+    const parts = [{ text: prompt }];
+    images.forEach(img => parts.push({ inline_data: { mime_type: img.mime || 'image/jpeg', data: img.base64 } }));
+
     const payload = {
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: body.mimeType || 'image/jpeg', data: body.imageBase64 } }
-        ]
-      }],
-      generationConfig: { temperature: 0.1, responseMimeType: 'application/json' }
+      contents: [{ parts }],
+      generationConfig: { temperature: 0.05, responseMimeType: 'application/json', maxOutputTokens: 2048 }
     };
     const data = JSON.stringify(payload);
     const apiReq = https.request({
@@ -370,11 +397,20 @@ Rispondi SOLO con JSON valido in questo formato esatto, senza testo aggiuntivo:
         const text = Buffer.concat(chunks).toString();
         try {
           const json = JSON.parse(text);
-          const out = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (json.error) { res.writeHead(500); return res.end(JSON.stringify({ error: json.error.message || 'Gemini error' })); }
+          let out = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          // Pulisci eventuali wrapper markdown
+          out = out.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+          // Tenta parse, se fallisce prova ad estrarre JSON con regex
+          try { JSON.parse(out); }
+          catch {
+            const m = out.match(/\{[\s\S]*\}/);
+            if (m) out = m[0];
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(out || JSON.stringify({ error: 'no response' }));
         } catch (e) {
-          res.writeHead(500); res.end(JSON.stringify({ error: 'parse error', raw: text }));
+          res.writeHead(500); res.end(JSON.stringify({ error: 'parse error', raw: text.substring(0, 500) }));
         }
       });
     });
