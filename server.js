@@ -408,6 +408,79 @@ Rispondi SOLO con JSON valido in questo formato esatto, senza testo aggiuntivo:
     return res.end(JSON.stringify(loadRequests()));
   }
 
+  // Endpoint admin: update richiesta + notifica utente via Telegram
+  if (req.url === '/api/telegram/requests/action' && req.method === 'POST') {
+    const body = await readBody(req);
+    const adminPass = process.env.ADMIN_PASS || '';
+    if (!body.adminPass || body.adminPass !== adminPass) {
+      res.writeHead(401); return res.end(JSON.stringify({ error: 'Unauthorized' }));
+    }
+    const { requestId, action, message } = body;
+    if (!requestId || !action) { res.writeHead(400); return res.end(JSON.stringify({ error: 'requestId+action richiesti' })); }
+    const requests = loadRequests();
+    const idx = requests.findIndex(r => r.id === requestId);
+    if (idx === -1) { res.writeHead(404); return res.end(JSON.stringify({ error: 'Richiesta non trovata' })); }
+    const r = requests[idx];
+    const chatId = r.from && r.from.chatId;
+    let userMessage = '';
+    if (action === 'approve') {
+      r.status = 'approved';
+      userMessage = '✅ <b>Matrice creata!</b>\n\nLa tua matrice turni è ora disponibile. ' +
+        (body.link ? '\n\n🔗 Link permanente:\n' + body.link : 'Aprila dall\'app o usa il menu del bot.') +
+        '\n\nDa ora riceverai ogni sera il turno del giorno dopo.';
+    } else if (action === 'reject') {
+      r.status = 'rejected';
+      userMessage = '❌ <b>Richiesta non accolta</b>\n\n' + (message || 'L\'amministratore non può creare la matrice al momento.') + '\n\nPuoi inviare una nuova richiesta in qualsiasi momento.';
+    } else if (action === 'needs_info') {
+      r.status = 'needs_info';
+      userMessage = '📝 <b>Servono ulteriori informazioni</b>\n\n' + (message || 'L\'amministratore richiede dettagli aggiuntivi.') + '\n\nRispondi qui sotto oppure premi 📋 Richiedi la mia matrice per ricominciare.';
+    } else if (action === 'message') {
+      // Solo messaggio custom, non cambia stato
+      userMessage = message || '';
+    } else if (action === 'delete') {
+      requests.splice(idx, 1);
+      saveRequests(requests);
+      res.writeHead(200); return res.end(JSON.stringify({ ok: true, deleted: true }));
+    } else {
+      res.writeHead(400); return res.end(JSON.stringify({ error: 'action non valida' }));
+    }
+    r.updatedAt = new Date().toISOString();
+    saveRequests(requests);
+    // Notifica utente via Telegram
+    if (chatId && userMessage) {
+      try { await tgSend(chatId, userMessage); }
+      catch (e) { console.warn('notify user failed', e.message); }
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ ok: true, request: r }));
+  }
+
+  // Proxy file Telegram per visualizzare gli screenshot nell'app
+  const fileMatch = req.url && req.url.match(/^\/api\/telegram\/file\/([^?]+)/);
+  if (fileMatch && req.method === 'GET' && TG_TOKEN) {
+    const fileId = decodeURIComponent(fileMatch[1]);
+    try {
+      const info = await tgRequest('getFile', { file_id: fileId });
+      if (!info.ok || !info.result || !info.result.file_path) {
+        res.writeHead(404); return res.end('File not found');
+      }
+      const filePath = info.result.file_path;
+      const fileUrl = `https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`;
+      https.get(fileUrl, fileRes => {
+        if (fileRes.statusCode !== 200) {
+          res.writeHead(fileRes.statusCode); return res.end('Upstream error');
+        }
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' });
+        fileRes.pipe(res);
+      }).on('error', e => { res.writeHead(500); res.end('Fetch error: ' + e.message); });
+      return;
+    } catch (e) {
+      res.writeHead(500); return res.end('Error: ' + e.message);
+    }
+  }
+
   if (req.url === '/api/telegram/send' && req.method === 'POST') {
     const body = await readBody(req);
     const { code, text } = body;

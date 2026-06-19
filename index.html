@@ -67,6 +67,13 @@
       <button class="icon-btn" type="button" aria-label="Scan" title="Scan"><i class="fa-solid fa-camera"></i></button>
       <span class="label">Scan</span>
     </div>
+    <div class="ctrl" id="sidebarRichieste" style="display:none;">
+      <button class="icon-btn" type="button" aria-label="Richieste" title="Richieste" style="position:relative;">
+        <i class="fa-solid fa-inbox"></i>
+        <span class="badge-counter" id="richiesteBadgeSidebar" style="display:none;">0</span>
+      </button>
+      <span class="label">Richieste</span>
+    </div>
   </aside>
 
   <div class="app-shell">
@@ -105,6 +112,13 @@
               <i class="fa-solid fa-camera"></i>
             </button>
             <span class="label">Scan</span>
+          </div>
+          <div class="ctrl" id="richiesteCtrl" style="display:none;">
+            <button class="icon-btn" id="richiesteBtn" type="button" title="Richieste matrici" aria-label="Richieste matrici" style="position:relative;">
+              <i class="fa-solid fa-inbox"></i>
+              <span class="badge-counter" id="richiesteBadge" style="display:none;">0</span>
+            </button>
+            <span class="label">Richieste</span>
           </div>
         </div>
         <button class="icon-btn mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu strumenti" style="display:none;">
@@ -165,6 +179,10 @@
         </div>
         <div class="sheet-tool-btn" id="sheetScan" data-target="scanBtn">
           <i class="fa-solid fa-camera"></i><span>Scan</span>
+        </div>
+        <div class="sheet-tool-btn" id="sheetRichieste" data-target="richiesteBtn" style="position:relative;">
+          <i class="fa-solid fa-inbox"></i><span>Richieste</span>
+          <span class="badge-counter" id="richiesteBadgeSheet" style="display:none;top:6px;right:6px;">0</span>
         </div>
         <div class="sheet-tool-btn" id="sheetExport">
           <i class="fa-solid fa-file-export"></i><span>Esporta</span>
@@ -234,6 +252,54 @@
       <div style="display:flex;gap:8px;justify-content:center;">
         <button type="button" class="confirm-btn-cancel" id="qrCloseBtn">Chiudi</button>
         <button type="button" class="confirm-btn-confirm" style="background:var(--accent);" id="qrCopyBtn"><i class="fa-solid fa-copy" style="margin-right:5px;"></i>Copia link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Richieste matrici (admin) -->
+  <div class="modal" id="richiesteModal" role="dialog" aria-modal="true" aria-labelledby="richiesteModalTitle">
+    <div class="modal-sheet" style="width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-head">
+        <div class="modal-title" id="richiesteModalTitle"><i class="fa-solid fa-inbox" style="margin-right:8px;color:var(--accent);"></i>Richieste Matrici</div>
+        <div style="display:flex;gap:6px;">
+          <button class="icon-btn" id="richiesteRefreshBtn" type="button" title="Aggiorna" aria-label="Aggiorna"><i class="fa-solid fa-rotate"></i></button>
+          <button class="icon-btn" id="richiesteCloseBtn" type="button" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div class="modal-list" id="richiesteList" style="flex:1;overflow-y:auto;padding:14px;">
+        <div class="empty-state" style="padding:24px;">
+          <div class="empty-state-msg">Caricamento richieste...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dettaglio singola richiesta -->
+  <div class="modal" id="requestDetailModal" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="width:min(640px,100%);max-height:92vh;display:flex;flex-direction:column;">
+      <div class="modal-head">
+        <div class="modal-title" id="requestDetailTitle">Dettaglio richiesta</div>
+        <button class="icon-btn" id="requestDetailCloseBtn" type="button" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px;" id="requestDetailBody"></div>
+      <div style="padding:14px;border-top:1px solid var(--stroke);display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+        <button class="btn" id="requestDetailDeleteBtn" type="button" style="margin-right:auto;color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
+        <button class="btn" id="requestDetailNeedsInfoBtn" type="button"><i class="fa-solid fa-circle-question"></i> Richiedi info</button>
+        <button class="btn" id="requestDetailRejectBtn" type="button" style="background:var(--danger);color:#fff;border-color:var(--danger);"><i class="fa-solid fa-xmark"></i> Rifiuta</button>
+        <button class="btn primary" id="requestDetailApproveBtn" type="button"><i class="fa-solid fa-check"></i> Matrice creata</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt messaggio (per needs_info / reject) -->
+  <div class="confirm-overlay" id="messagePromptOverlay" role="dialog" aria-modal="true">
+    <div class="confirm-box" style="max-width:440px;">
+      <div class="confirm-title" id="messagePromptTitle">Scrivi un messaggio</div>
+      <div class="confirm-msg" id="messagePromptDesc">Verrà inviato all'utente via Telegram.</div>
+      <textarea id="messagePromptText" rows="4" style="width:100%;padding:10px 12px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);color:var(--text);font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box;" placeholder="Scrivi qui..."></textarea>
+      <div class="confirm-buttons" style="margin-top:14px;">
+        <button type="button" class="confirm-btn-cancel" id="messagePromptCancel">Annulla</button>
+        <button type="button" class="confirm-btn-confirm" id="messagePromptOk" style="background:var(--accent);">Invia</button>
       </div>
     </div>
   </div>
@@ -5983,6 +6049,280 @@ function buildHolidayMapForYear(year){
     })();
 
     if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+    // ===== RICHIESTE MATRICI (admin) =====
+    let _richiesteCache = [];
+    let _lastSeenRequestIds = JSON.parse(safeStorageGet('lastSeenRequestIds') || '[]');
+
+    function getAdminPass(){
+      const p = sessionStorage.getItem('adminPassCache') || '';
+      return p;
+    }
+
+    async function fetchRichieste(){
+      try{
+        const r = await fetch('/api/telegram/requests', { cache: 'no-store' });
+        if(!r.ok) return [];
+        return await r.json();
+      } catch(e){ return []; }
+    }
+
+    function updateRichiesteBadge(){
+      const pending = _richiesteCache.filter(r => r.status === 'pending');
+      const count = pending.length;
+      ['richiesteBadge','richiesteBadgeSidebar','richiesteBadgeSheet'].forEach(id=>{
+        const b = document.getElementById(id);
+        if(!b) return;
+        b.textContent = count > 99 ? '99+' : String(count);
+        b.style.display = count > 0 ? '' : 'none';
+      });
+      // Notifica suono+haptic+toast se ci sono nuove richieste non viste
+      const newIds = pending.filter(r => !_lastSeenRequestIds.includes(r.id)).map(r=>r.id);
+      if(newIds.length > 0 && _lastSeenRequestIds.length > 0){
+        try{
+          if(navigator.vibrate) navigator.vibrate([50,30,50,30,50]);
+          toast('Nuova richiesta', newIds.length+' richiesta/e in attesa di gestione.', 'info');
+        } catch{}
+      }
+      _lastSeenRequestIds = pending.map(r=>r.id);
+      safeStorageSet('lastSeenRequestIds', JSON.stringify(_lastSeenRequestIds));
+    }
+
+    async function refreshRichieste(){
+      _richiesteCache = await fetchRichieste();
+      updateRichiesteBadge();
+      renderRichiesteList();
+    }
+
+    function renderRichiesteList(){
+      const list = document.getElementById('richiesteList');
+      if(!list) return;
+      const reqs = _richiesteCache.slice().sort((a,b)=>{
+        // Pending prima, poi per data desc
+        const sa = a.status === 'pending' ? 0 : 1;
+        const sb = b.status === 'pending' ? 0 : 1;
+        if(sa !== sb) return sa - sb;
+        return (b.createdAt||'').localeCompare(a.createdAt||'');
+      });
+      if(!reqs.length){
+        list.innerHTML = '<div class="empty-state" style="padding:32px 16px;"><svg class="empty-state-icon" viewBox="0 0 120 120"><circle cx="60" cy="60" r="48" fill="none" stroke="currentColor" stroke-width="3" opacity="0.4"/><path d="M40 56h40M40 68h28" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><div class="empty-state-title">Nessuna richiesta</div><div class="empty-state-msg">Quando un utente farà una richiesta tramite il bot Telegram, comparirà qui.</div></div>';
+        return;
+      }
+      const statusLabels = {
+        pending: 'IN ATTESA',
+        approved: 'APPROVATA',
+        rejected: 'RIFIUTATA',
+        needs_info: 'INFO RICHIESTE'
+      };
+      list.innerHTML = reqs.map(r => {
+        const dt = new Date(r.createdAt);
+        const dateLbl = dt.toLocaleDateString('it-IT', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        return `<div class="richiesta-item" data-id="${r.id}">
+          <div class="richiesta-item-head">
+            <div class="richiesta-item-name">${escapeHtml(r.nome)}</div>
+            <span class="richiesta-item-status status-${r.status}">${statusLabels[r.status] || r.status}</span>
+          </div>
+          <div class="richiesta-item-meta">
+            <span>👔 <strong>${r.ruolo === 'tutor' ? 'Tutor' : 'Dipendente'}</strong></span>
+            <span>🏷 <strong>Team ${r.team}</strong></span>
+            <span>🏢 ${escapeHtml(r.rientro || '—')}</span>
+            <span>📅 ${dateLbl}</span>
+            <span>📸 ${(r.photos||[]).length} foto</span>
+          </div>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.richiesta-item').forEach(el => {
+        el.addEventListener('click', ()=> openRequestDetail(el.dataset.id));
+      });
+    }
+
+    function openRequestDetail(id){
+      const r = _richiesteCache.find(x => x.id === id);
+      if(!r) return;
+      const body = document.getElementById('requestDetailBody');
+      const title = document.getElementById('requestDetailTitle');
+      title.textContent = 'Richiesta da ' + r.nome;
+      const photosHtml = (r.photos||[]).map((fid, i) =>
+        `<div><div class="richiesta-detail-label">Settimana ${i+1}</div><a href="/api/telegram/file/${encodeURIComponent(fid)}" target="_blank" rel="noopener"><img class="richiesta-photo" src="/api/telegram/file/${encodeURIComponent(fid)}" alt="Screenshot settimana ${i+1}" loading="lazy" /></a></div>`
+      ).join('');
+      body.innerHTML = `
+        <div class="richiesta-detail-section">
+          <div class="richiesta-detail-grid">
+            <div>
+              <div class="richiesta-detail-label">Nome</div>
+              <div class="richiesta-detail-value">${escapeHtml(r.nome)}</div>
+            </div>
+            <div>
+              <div class="richiesta-detail-label">Ruolo</div>
+              <div class="richiesta-detail-value">${r.ruolo === 'tutor' ? 'Tutor' : 'Dipendente'}</div>
+            </div>
+            <div>
+              <div class="richiesta-detail-label">Team</div>
+              <div class="richiesta-detail-value">Team ${r.team}</div>
+            </div>
+            <div>
+              <div class="richiesta-detail-label">Rientro</div>
+              <div class="richiesta-detail-value">${escapeHtml(r.rientro || '—')}</div>
+            </div>
+            <div>
+              <div class="richiesta-detail-label">Telegram</div>
+              <div class="richiesta-detail-value">${escapeHtml(r.from && r.from.telegramName || '—')}</div>
+            </div>
+            <div>
+              <div class="richiesta-detail-label">Inviata</div>
+              <div class="richiesta-detail-value">${new Date(r.createdAt).toLocaleString('it-IT')}</div>
+            </div>
+          </div>
+        </div>
+        <div class="richiesta-detail-label" style="margin-bottom:8px;">📸 Screenshot allegati (${(r.photos||[]).length})</div>
+        <div class="richiesta-photo-row">${photosHtml || '<div class="empty-state-msg">Nessuno screenshot</div>'}</div>
+      `;
+      // Bind azioni
+      document.getElementById('requestDetailApproveBtn').onclick = ()=> handleRequestAction(r, 'approve');
+      document.getElementById('requestDetailNeedsInfoBtn').onclick = ()=> handleRequestAction(r, 'needs_info');
+      document.getElementById('requestDetailRejectBtn').onclick = ()=> handleRequestAction(r, 'reject');
+      document.getElementById('requestDetailDeleteBtn').onclick = async ()=>{
+        const ok = await customConfirm('Eliminare definitivamente questa richiesta?', { title: 'Elimina richiesta', confirmText: 'Elimina' });
+        if(!ok) return;
+        await callRequestAction(r.id, 'delete');
+        closeModal('requestDetailModal');
+        refreshRichieste();
+        toast('Eliminata', 'Richiesta rimossa', 'success');
+      };
+      openModal('requestDetailModal');
+    }
+
+    function promptMessage(title, desc){
+      return new Promise(resolve => {
+        const overlay = document.getElementById('messagePromptOverlay');
+        const titleEl = document.getElementById('messagePromptTitle');
+        const descEl = document.getElementById('messagePromptDesc');
+        const txt = document.getElementById('messagePromptText');
+        const okBtn = document.getElementById('messagePromptOk');
+        const cancelBtn = document.getElementById('messagePromptCancel');
+        titleEl.textContent = title;
+        descEl.textContent = desc;
+        txt.value = '';
+        overlay.classList.add('open');
+        setTimeout(()=>txt.focus(), 50);
+        function close(){
+          overlay.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+        }
+        function onOk(){ const v = txt.value.trim(); close(); resolve(v || null); }
+        function onCancel(){ close(); resolve(null); }
+        function onOverlay(e){ if(e.target===overlay){ close(); resolve(null); } }
+        function onKey(e){ if(e.key==='Escape'){ close(); resolve(null); } }
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+      });
+    }
+
+    async function callRequestAction(requestId, action, extra){
+      const adminPass = getAdminPass();
+      if(!adminPass){
+        toast('Sessione admin scaduta', 'Esci e rientra come admin per usare questa funzione.', 'warning');
+        return null;
+      }
+      try{
+        const r = await fetch('/api/telegram/requests/action', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(Object.assign({ adminPass, requestId, action }, extra || {}))
+        });
+        if(!r.ok){ toast('Errore', 'Server: '+r.status, 'error'); return null; }
+        return await r.json();
+      } catch(e){ toast('Errore', e.message, 'error'); return null; }
+    }
+
+    async function handleRequestAction(r, action){
+      if(action === 'approve'){
+        const ok = await customConfirm(
+          `Confermi che la matrice di ${r.nome} è pronta? L'utente riceverà la notifica via Telegram.`,
+          { title: 'Matrice creata', confirmText: 'Conferma e notifica', danger: false }
+        );
+        if(!ok) return;
+        // Trova il collega corrispondente nella state per generare link permanente
+        let link = '';
+        const matched = state.colleghi.find(c => (c.name||'').toLowerCase() === r.nome.toLowerCase());
+        if(matched && matched.startWeekISO && matched.anchorPatternIndex !== null){
+          const payload = {
+            n: matched.name, r: matched.role, d: matched.durationKey, dm: matched.durationMinutes,
+            w: matched.startWeekISO, a: matched.anchorPatternIndex, t: matched.team || null
+          };
+          const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+          link = window.location.origin + window.location.pathname + '#share=' + b64;
+        }
+        const result = await callRequestAction(r.id, 'approve', { link });
+        if(result && result.ok){
+          closeModal('requestDetailModal');
+          refreshRichieste();
+          toast('Notificato!', r.nome + ' ha ricevuto il messaggio via Telegram.', 'success');
+        }
+      } else if(action === 'needs_info'){
+        const msg = await promptMessage('Richiedi maggiori informazioni', 'Spiega all\'utente cosa serve. Il messaggio sarà inviato via Telegram.');
+        if(!msg) return;
+        const result = await callRequestAction(r.id, 'needs_info', { message: msg });
+        if(result && result.ok){
+          closeModal('requestDetailModal');
+          refreshRichieste();
+          toast('Inviato', r.nome + ' è stato contattato via Telegram.', 'success');
+        }
+      } else if(action === 'reject'){
+        const msg = await promptMessage('Motivo del rifiuto', 'Spiega all\'utente perché la matrice non può essere creata.');
+        if(!msg) return;
+        const ok = await customConfirm(`Rifiutare la richiesta di ${r.nome}? L'utente riceverà la notifica.`, { title: 'Rifiuta richiesta', confirmText: 'Rifiuta' });
+        if(!ok) return;
+        const result = await callRequestAction(r.id, 'reject', { message: msg });
+        if(result && result.ok){
+          closeModal('requestDetailModal');
+          refreshRichieste();
+          toast('Rifiutata', r.nome + ' è stato notificato.', 'success');
+        }
+      }
+    }
+
+    // Bind bottoni Richieste
+    function openRichiesteModal(){
+      refreshRichieste();
+      openModal('richiesteModal');
+    }
+    document.getElementById('richiesteBtn').addEventListener('click', openRichiesteModal);
+    const _sbRichieste = document.getElementById('sidebarRichieste');
+    if(_sbRichieste) _sbRichieste.addEventListener('click', openRichiesteModal);
+    document.getElementById('richiesteCloseBtn').addEventListener('click', ()=> closeModal('richiesteModal'));
+    document.getElementById('richiesteModal').addEventListener('click', e=>{ if(e.target.id==='richiesteModal') closeModal('richiesteModal'); });
+    document.getElementById('richiesteRefreshBtn').addEventListener('click', refreshRichieste);
+    document.getElementById('requestDetailCloseBtn').addEventListener('click', ()=> closeModal('requestDetailModal'));
+    document.getElementById('requestDetailModal').addEventListener('click', e=>{ if(e.target.id==='requestDetailModal') closeModal('requestDetailModal'); });
+
+    // Visibilità ctrl Richieste in funzione admin
+    function updateRichiesteVisibility(){
+      const isAdmin = isAdminSession();
+      ['richiesteCtrl','sidebarRichieste'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.style.display = isAdmin ? '' : 'none';
+      });
+      const sheet = document.getElementById('sheetRichieste');
+      if(sheet) sheet.style.display = isAdmin ? '' : 'none';
+    }
+    updateRichiesteVisibility();
+    const _origUpd = updateAdminUI;
+    updateAdminUI = function(){ _origUpd.apply(this, arguments); updateRichiesteVisibility(); };
+
+    // Cache della password admin appena inserita (per usare le API admin senza chiedere di nuovo)
+    document.getElementById('confirmAdminBtn').addEventListener('click', ()=>{
+      const v = document.getElementById('adminPassInput').value;
+      if(v) sessionStorage.setItem('adminPassCache', v);
+    }, true);
+    // Polling ogni 30 secondi quando admin
+    setInterval(()=>{ if(isAdminSession()) refreshRichieste(); }, 30000);
+    // Refresh iniziale dopo qualche secondo
+    setTimeout(()=>{ if(isAdminSession()) refreshRichieste(); }, 2000);
 
     // ===== PWA INSTALL PROMPT =====
     (function(){

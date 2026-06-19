@@ -993,6 +993,95 @@
       body:not(.is-admin) .app-shell{ padding-left: 0 !important; }
       body:not(.is-admin) .topbar{ padding-left: 20px !important; }
     }
+    /* ===== BADGE CONTATORE RICHIESTE ===== */
+    .badge-counter{
+      position: absolute;
+      top: -4px; right: -4px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.20);
+      line-height: 1;
+      animation: badgePulse 2s ease-in-out infinite;
+    }
+    @keyframes badgePulse{
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    /* ===== RICHIESTA CARD ===== */
+    .richiesta-item{
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: var(--card);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .2s, border-color .15s;
+    }
+    .richiesta-item:hover{
+      border-color: var(--accent);
+      box-shadow: 0 4px 14px rgba(0,102,204,0.08);
+    }
+    .richiesta-item-head{
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .richiesta-item-name{ font-weight: 800; font-size: 15px; }
+    .richiesta-item-status{
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px; letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .status-pending{ background: rgba(217,119,6,0.12); color: var(--warn); border: 1px solid rgba(217,119,6,0.25); }
+    .status-approved{ background: rgba(5,150,105,0.12); color: var(--ok); border: 1px solid rgba(5,150,105,0.25); }
+    .status-rejected{ background: rgba(220,38,38,0.10); color: var(--danger); border: 1px solid rgba(220,38,38,0.20); }
+    .status-needs_info{ background: rgba(0,102,204,0.10); color: var(--accent); border: 1px solid rgba(0,102,204,0.22); }
+    .richiesta-item-meta{
+      display: flex; flex-wrap: wrap; gap: 8px 14px;
+      font-size: 12px; color: var(--muted); font-weight: 600;
+    }
+    .richiesta-item-meta strong{ color: var(--text); font-weight: 700; }
+    .richiesta-detail-section{
+      background: var(--ctrl-bg);
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    .richiesta-detail-label{
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px;
+    }
+    .richiesta-detail-value{
+      font-size: 14px; font-weight: 700; color: var(--text);
+    }
+    .richiesta-detail-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .richiesta-photo{
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      margin: 8px auto;
+      border-radius: 8px;
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow-soft);
+    }
+    .richiesta-photo-row{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
     /* ===== GUEST LANDING CARD ===== */
     .guest-card{
       animation: cardFadeIn .4s ease-out both;
