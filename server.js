@@ -11,6 +11,154 @@ const LINKS_FILE = '/tmp/tg-links.json';
 const SESSIONS_FILE = '/tmp/tg-sessions.json';
 const REQUESTS_FILE = '/tmp/tg-requests.json';
 
+// ===== FIRESTORE PERSISTENCE =====
+// Render free tier ha filesystem effimero. Persistiamo richieste e links su Firestore
+// usando le stesse credenziali Firebase del client.
+const FB_API_KEY = process.env.FB_API_KEY || 'AIzaSyBEeNgqLl8hLhxSMvZxHXoxvw9TDYlaOiw';
+const FB_PROJECT_ID = process.env.FB_PROJECT_ID || 'amatriciana-199a1';
+let _idToken = null;
+let _idTokenExp = 0;
+
+function httpsPost(hostname, urlPath, payload, headers) {
+  return new Promise((resolve, reject) => {
+    const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    const req = https.request({
+      hostname, path: urlPath, method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }, headers || {})
+    }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString();
+        try { resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null }); }
+        catch { resolve({ status: res.statusCode, body: text }); }
+      });
+    });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+function httpsRequestRaw(hostname, urlPath, method, payload, headers) {
+  return new Promise((resolve, reject) => {
+    const data = payload ? (typeof payload === 'string' ? payload : JSON.stringify(payload)) : null;
+    const opts = { hostname, path: urlPath, method, headers: Object.assign({}, headers || {}) };
+    if (data) opts.headers['Content-Length'] = Buffer.byteLength(data);
+    if (data && !opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
+    const req = https.request(opts, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString();
+        try { resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null }); }
+        catch { resolve({ status: res.statusCode, body: text }); }
+      });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+async function getFirestoreToken() {
+  const email = process.env.FB_EMAIL || '';
+  const password = process.env.FB_PASS || '';
+  if (!email || !password) throw new Error('FB credenziali mancanti');
+  if (_idToken && Date.now() < _idTokenExp - 60000) return _idToken;
+  const r = await httpsPost('identitytoolkit.googleapis.com',
+    `/v1/accounts:signInWithPassword?key=${FB_API_KEY}`,
+    { email, password, returnSecureToken: true });
+  if (r.status !== 200 || !r.body || !r.body.idToken) {
+    throw new Error('Firebase auth failed: ' + JSON.stringify(r.body));
+  }
+  _idToken = r.body.idToken;
+  _idTokenExp = Date.now() + (Number(r.body.expiresIn) * 1000);
+  return _idToken;
+}
+
+// Firestore REST: GET doc → ritorna fields parsed, o null se non esiste
+async function fsGet(docPath) {
+  try {
+    const token = await getFirestoreToken();
+    const r = await httpsRequestRaw('firestore.googleapis.com',
+      `/v1/projects/${FB_PROJECT_ID}/databases/(default)/documents/${docPath}`,
+      'GET', null, { Authorization: 'Bearer ' + token });
+    if (r.status === 404) return null;
+    if (r.status !== 200) throw new Error('fsGet ' + r.status);
+    return fsParseDoc(r.body);
+  } catch (e) { console.warn('fsGet fail', docPath, e.message); return null; }
+}
+// Firestore REST: SET doc (overwrite)
+async function fsSet(docPath, data) {
+  try {
+    const token = await getFirestoreToken();
+    const body = { fields: fsEncode(data) };
+    const r = await httpsRequestRaw('firestore.googleapis.com',
+      `/v1/projects/${FB_PROJECT_ID}/databases/(default)/documents/${docPath}`,
+      'PATCH', body, { Authorization: 'Bearer ' + token });
+    if (r.status !== 200) console.warn('fsSet status', r.status, r.body);
+    return r.status === 200;
+  } catch (e) { console.warn('fsSet fail', docPath, e.message); return false; }
+}
+// Firestore type encoding
+function fsEncode(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(fsEncode) } };
+  if (typeof v === 'object') {
+    const fields = {};
+    for (const k of Object.keys(v)) fields[k] = fsEncode(v[k]);
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(v) };
+}
+function fsDecode(v) {
+  if (!v) return null;
+  if ('nullValue' in v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsDecode);
+  if ('mapValue' in v) {
+    const out = {};
+    for (const k of Object.keys(v.mapValue.fields || {})) out[k] = fsDecode(v.mapValue.fields[k]);
+    return out;
+  }
+  return null;
+}
+function fsParseDoc(doc) {
+  if (!doc || !doc.fields) return null;
+  const out = {};
+  for (const k of Object.keys(doc.fields)) out[k] = fsDecode(doc.fields[k]);
+  return out;
+}
+
+// Cache in memoria sincronizzata con Firestore
+let _cachedLinks = null;
+let _cachedRequests = null;
+let _firestoreReady = false;
+
+async function fsBoot() {
+  try {
+    const linksDoc = await fsGet('app_state/tg_links');
+    if (linksDoc && linksDoc.data) _cachedLinks = linksDoc.data;
+    else _cachedLinks = {};
+    const reqDoc = await fsGet('app_state/tg_requests');
+    if (reqDoc && Array.isArray(reqDoc.list)) _cachedRequests = reqDoc.list;
+    else _cachedRequests = [];
+    _firestoreReady = true;
+    console.log('Firestore loaded: links=' + Object.keys(_cachedLinks).length + ' requests=' + _cachedRequests.length);
+  } catch (e) {
+    console.warn('Firestore boot failed, fallback to /tmp', e.message);
+    _cachedLinks = (function(){ try { return JSON.parse(fs.readFileSync(LINKS_FILE, 'utf8')); } catch { return {}; } })();
+    _cachedRequests = (function(){ try { return JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch { return []; } })();
+  }
+}
+fsBoot();
+
 const MIME = {
   '.html': 'text/html',
   '.js':   'application/javascript',
@@ -34,10 +182,15 @@ function readBody(req) {
 }
 
 function loadLinks() {
-  try { return JSON.parse(fs.readFileSync(LINKS_FILE, 'utf8')); } catch { return {}; }
+  if (_cachedLinks !== null) return _cachedLinks;
+  try { _cachedLinks = JSON.parse(fs.readFileSync(LINKS_FILE, 'utf8')); } catch { _cachedLinks = {}; }
+  return _cachedLinks;
 }
 function saveLinks(obj) {
+  _cachedLinks = obj;
   try { fs.writeFileSync(LINKS_FILE, JSON.stringify(obj)); } catch (e) { console.warn('save links failed', e); }
+  // Persist to Firestore in background
+  fsSet('app_state/tg_links', { data: obj, updatedAt: new Date().toISOString() }).catch(()=>{});
 }
 function loadSessions() {
   try { return JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8')); } catch { return {}; }
@@ -46,10 +199,15 @@ function saveSessions(obj) {
   try { fs.writeFileSync(SESSIONS_FILE, JSON.stringify(obj)); } catch (e) { console.warn('save sessions failed', e); }
 }
 function loadRequests() {
-  try { return JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch { return []; }
+  if (_cachedRequests !== null) return _cachedRequests;
+  try { _cachedRequests = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8')); } catch { _cachedRequests = []; }
+  return _cachedRequests;
 }
 function saveRequests(arr) {
+  _cachedRequests = arr;
   try { fs.writeFileSync(REQUESTS_FILE, JSON.stringify(arr)); } catch (e) { console.warn('save requests failed', e); }
+  // Persist to Firestore in background
+  fsSet('app_state/tg_requests', { list: arr, updatedAt: new Date().toISOString() }).catch(()=>{});
 }
 function getAdminChatId() {
   const links = loadLinks();
@@ -291,6 +449,40 @@ async function handleTelegramUpdate(update) {
     return;
   }
 
+  // Reply flow: se la chat ha una richiesta in awaitingReply, inoltra tutto all'admin
+  const requests = loadRequests();
+  const pendingReply = requests.find(r =>
+    r.from && r.from.chatId === chatId && r.awaitingReply === true
+  );
+  if (pendingReply) {
+    const adminChatId = getAdminChatId();
+    if (!adminChatId) {
+      await tgSend(chatId, '⚠️ L\'amministratore non è raggiungibile al momento. Riprova più tardi.');
+      return;
+    }
+    // Inoltra messaggio all'admin con contesto
+    const header = `💬 <b>Risposta da ${escapeHtml(pendingReply.nome)}</b> (richiesta <code>${pendingReply.id}</code>)\n`;
+    if (msg.photo && msg.photo.length) {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      try { await tgForwardPhoto(adminChatId, fileId, header + (msg.caption ? '\n' + escapeHtml(msg.caption) : '')); }
+      catch (e) { console.warn('forward reply photo', e.message); }
+    } else if (text) {
+      try { await tgSend(adminChatId, header + '\n' + escapeHtml(text)); }
+      catch (e) { console.warn('forward reply text', e.message); }
+    } else {
+      try { await tgSend(adminChatId, header + '\n<i>(messaggio non testuale ricevuto)</i>'); } catch{}
+    }
+    // Aggiungi al log della richiesta
+    pendingReply.replies = pendingReply.replies || [];
+    pendingReply.replies.push({
+      at: new Date().toISOString(),
+      text: msg.photo ? '[foto]' + (msg.caption ? ': ' + msg.caption : '') : (text || '[messaggio non testuale]')
+    });
+    saveRequests(requests);
+    await tgSend(chatId, '✅ <b>Risposta inviata all\'amministratore.</b>\n\nPuoi continuare a scrivere se servono altri dettagli.', cancelKeyboard());
+    return;
+  }
+
   // Default: messaggio generico
   await tgSend(chatId,
     "Non ho capito. Premi <b>📋 Richiedi la mia matrice</b> per iniziare oppure <b>ℹ️ Aiuto</b>.",
@@ -461,15 +653,18 @@ Se ricevi più immagini, fondi i risultati in UN UNICO array "giorni" ordinato p
     let userMessage = '';
     if (action === 'approve') {
       r.status = 'approved';
+      r.awaitingReply = false;
       userMessage = '✅ <b>Matrice creata!</b>\n\nLa tua matrice turni è ora disponibile. ' +
         (body.link ? '\n\n🔗 Link permanente:\n' + body.link : 'Aprila dall\'app o usa il menu del bot.') +
         '\n\nDa ora riceverai ogni sera il turno del giorno dopo.';
     } else if (action === 'reject') {
       r.status = 'rejected';
+      r.awaitingReply = false;
       userMessage = '❌ <b>Richiesta non accolta</b>\n\n' + (message || 'L\'amministratore non può creare la matrice al momento.') + '\n\nPuoi inviare una nuova richiesta in qualsiasi momento.';
     } else if (action === 'needs_info') {
       r.status = 'needs_info';
-      userMessage = '📝 <b>Servono ulteriori informazioni</b>\n\n' + (message || 'L\'amministratore richiede dettagli aggiuntivi.') + '\n\nRispondi qui sotto oppure premi 📋 Richiedi la mia matrice per ricominciare.';
+      r.awaitingReply = true; // Sblocca il flow di risposta libera
+      userMessage = '📝 <b>Servono ulteriori informazioni</b>\n\n' + (message || 'L\'amministratore richiede dettagli aggiuntivi.') + '\n\n💬 <b>Rispondi direttamente qui</b> scrivendo un messaggio o inviando una foto. Tutto quello che scriverai sarà inoltrato all\'amministratore.';
     } else if (action === 'message') {
       // Solo messaggio custom, non cambia stato
       userMessage = message || '';

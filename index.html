@@ -284,6 +284,7 @@
       <div style="flex:1;overflow-y:auto;padding:18px;" id="requestDetailBody"></div>
       <div style="padding:14px;border-top:1px solid var(--stroke);display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
         <button class="btn" id="requestDetailDeleteBtn" type="button" style="margin-right:auto;color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
+        <button class="btn" id="requestDetailMessageBtn" type="button"><i class="fa-solid fa-paper-plane"></i> Messaggio</button>
         <button class="btn" id="requestDetailNeedsInfoBtn" type="button"><i class="fa-solid fa-circle-question"></i> Richiedi info</button>
         <button class="btn" id="requestDetailRejectBtn" type="button" style="background:var(--danger);color:#fff;border-color:var(--danger);"><i class="fa-solid fa-xmark"></i> Rifiuta</button>
         <button class="btn primary" id="requestDetailApproveBtn" type="button"><i class="fa-solid fa-check"></i> Matrice creata</button>
@@ -6318,11 +6319,22 @@ function buildHolidayMapForYear(year){
         </div>
         <div class="richiesta-detail-label" style="margin-bottom:8px;">📸 Screenshot allegati (${(r.photos||[]).length})</div>
         <div class="richiesta-photo-row">${photosHtml || '<div class="empty-state-msg">Nessuno screenshot</div>'}</div>
+        ${(r.replies && r.replies.length) ? `
+          <div class="richiesta-detail-label" style="margin-top:16px;margin-bottom:8px;">💬 Risposte ricevute (${r.replies.length})</div>
+          <div style="background:var(--ctrl-bg);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
+            ${r.replies.map(reply => `<div style="border-left:3px solid var(--accent);padding-left:10px;font-size:13px;">
+              <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;">${new Date(reply.at).toLocaleString('it-IT')}</div>
+              <div>${escapeHtml(reply.text)}</div>
+            </div>`).join('')}
+          </div>
+        ` : ''}
+        ${r.awaitingReply ? `<div style="margin-top:12px;padding:10px 12px;background:rgba(0,102,204,0.08);border:1px solid rgba(0,102,204,0.20);border-radius:8px;font-size:12px;color:var(--accent);font-weight:700;"><i class="fa-solid fa-comments" style="margin-right:6px;"></i>In attesa di risposta dall'utente</div>` : ''}
       `;
       // Bind azioni
       document.getElementById('requestDetailApproveBtn').onclick = ()=> handleRequestAction(r, 'approve');
       document.getElementById('requestDetailNeedsInfoBtn').onclick = ()=> handleRequestAction(r, 'needs_info');
       document.getElementById('requestDetailRejectBtn').onclick = ()=> handleRequestAction(r, 'reject');
+      document.getElementById('requestDetailMessageBtn').onclick = ()=> handleRequestAction(r, 'message');
       document.getElementById('requestDetailDeleteBtn').onclick = async ()=>{
         const ok = await customConfirm('Eliminare definitivamente questa richiesta?', { title: 'Elimina richiesta', confirmText: 'Elimina' });
         if(!ok) return;
@@ -6413,6 +6425,14 @@ function buildHolidayMapForYear(year){
           closeModal('requestDetailModal');
           refreshRichieste();
           toast('Inviato', r.nome + ' è stato contattato via Telegram.', 'success');
+        }
+      } else if(action === 'message'){
+        const msg = await promptMessage('Invia messaggio a ' + r.nome, 'Messaggio libero (non cambia stato richiesta). Inviato via Telegram.');
+        if(!msg) return;
+        const result = await callRequestAction(r.id, 'message', { message: msg });
+        if(result && result.ok){
+          refreshRichieste();
+          toast('Messaggio inviato', r.nome + ' ha ricevuto il messaggio.', 'success');
         }
       } else if(action === 'reject'){
         const msg = await promptMessage('Motivo del rifiuto', 'Spiega all\'utente perché la matrice non può essere creata.');
