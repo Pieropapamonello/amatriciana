@@ -342,14 +342,9 @@
             <i class="fa-brands fa-telegram"></i>
             <span>Apri il bot Telegram</span>
           </a>
-          <div class="guest-footer">
-            <span>Hai già una matrice configurata?</span>
-            <a href="#" id="guestExistingLink">Seleziona il tuo nome</a>
-          </div>
-          <div id="guestSelectorWrap" style="display:none;">
-            <select class="select-like" id="guestProfileSelect" aria-label="Seleziona il tuo profilo">
-              <option value="">— Seleziona il tuo nome —</option>
-            </select>
+          <div class="guest-footer-info">
+            <i class="fa-solid fa-lock" style="margin-right:6px;opacity:0.6;"></i>
+            Hai già la matrice? Apri il link condiviso dall'amministratore.
           </div>
         </div>
       </div>
@@ -2252,33 +2247,21 @@ function buildHolidayMapForYear(year){
 
     function updateGuestState(){
       const guestCard = document.getElementById('guestCard');
-      const sel = document.getElementById('guestProfileSelect');
-      if(!guestCard || !sel) return;
+      if(!guestCard) return;
       const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
-      const hasProfile = !!(state.role && state.startWeekISO && state.anchorPatternIndex !== null && state.durationMinutes);
       const isShareMode = document.body.classList.contains('share-mode');
       // La guest card è visibile via CSS quando non c'è .is-admin/.share-mode.
-      // Qui la nascondiamo SOLO se non admin ma ha un profilo caricato (mostra direttamente la matrice).
-      if(!isAdmin && !isShareMode && hasProfile){
+      // I non-admin non possono mai vedere la lista colleghi (privacy).
+      // L'unico modo per loro di vedere una matrice è il link permanente dell'admin.
+      if(isAdmin || isShareMode){
         guestCard.style.display = 'none';
       } else {
-        guestCard.style.display = ''; // lascia decidere al CSS
-      }
-      // Popola select se vuoto
-      if(sel.options.length <= 1 && Array.isArray(state.colleghi) && state.colleghi.length){
-        sel.innerHTML = '<option value="">— Seleziona il tuo nome —</option>';
-        state.colleghi.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(c=>{
-          if(!c.startWeekISO || c.anchorPatternIndex === null) return;
-          const o = document.createElement('option');
-          o.value = c.id;
-          o.textContent = c.name + ' (' + (c.role==='tutor'?'Tutor':'Dip') + (c.team?' T'+c.team:'') + ')';
-          sel.appendChild(o);
-        });
+        guestCard.style.display = '';
       }
     }
 
     function bindGuestSelector(){
-      // Bot Telegram link
+      // Bot Telegram link — unico modo per i non-admin di richiedere la matrice
       const tgBtn = document.getElementById('guestTgRequestBtn');
       if(tgBtn && !tgBtn._bound){
         tgBtn._bound = true;
@@ -2294,41 +2277,6 @@ function buildHolidayMapForYear(year){
           } catch(err){ toast('Errore', 'Impossibile contattare il server.', 'error'); }
         });
       }
-      // Toggle "Già hai una matrice"
-      const existing = document.getElementById('guestExistingLink');
-      const wrap = document.getElementById('guestSelectorWrap');
-      if(existing && wrap && !existing._bound){
-        existing._bound = true;
-        existing.addEventListener('click', (e)=>{
-          e.preventDefault();
-          wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
-        });
-      }
-      const sel = document.getElementById('guestProfileSelect');
-      if(!sel || sel._bound) return;
-      sel._bound = true;
-      sel.addEventListener('change', ()=>{
-        const id = sel.value;
-        if(!id) return;
-        const c = state.colleghi.find(x=>x.id===id);
-        if(!c) return;
-        state.role = c.role || 'dipendente';
-        state.durationKey = c.durationKey;
-        state.durationMinutes = c.durationMinutes;
-        state.startWeekISO = c.startWeekISO;
-        state.anchorPatternIndex = c.anchorPatternIndex;
-        state.team = c.team || null;
-        state.generated = true;
-        setActiveRole(state.role);
-        safeStorageSet('quickProfileId', c.id);
-        safeStorageSet('operatorRole', state.role);
-        if(c.durationKey) safeStorageSet('durationKey', c.durationKey);
-        if(c.startWeekISO) safeStorageSet('startWeekISO', c.startWeekISO);
-        if(c.anchorPatternIndex !== null) safeStorageSet('anchorPatternIndex', String(c.anchorPatternIndex));
-        if(typeof render === 'function') render();
-        updateGuestState();
-        toast('Profilo caricato', c.name);
-      });
     }
 
     function isAdminSession(){

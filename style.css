@@ -1174,22 +1174,14 @@
     .guest-cta:hover{ transform: translateY(-2px); box-shadow: 0 14px 36px rgba(34,158,217,0.45); }
     .guest-cta:active{ transform: translateY(0); }
     .guest-cta i{ font-size: 22px; }
-    .guest-footer{
-      margin-top: 20px;
+    .guest-footer-info{
+      margin-top: 22px;
+      padding-top: 16px;
+      border-top: 1px solid var(--stroke);
       font-size: 12px;
       color: var(--muted);
       font-weight: 500;
-    }
-    .guest-footer a{
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 700;
-      margin-left: 4px;
-    }
-    .guest-footer a:hover{ text-decoration: underline; }
-    #guestSelectorWrap{
-      max-width: 340px;
-      margin: 16px auto 0;
+      line-height: 1.5;
     }
     @media (max-width: 480px){
       .guest-inner{ padding: 26px 18px 22px; }
