@@ -246,22 +246,165 @@ async function tgSend(chatId, text, extra) {
 async function tgForwardPhoto(adminChatId, fileId, caption) {
   return tgRequest('sendPhoto', { chat_id: adminChatId, photo: fileId, caption: caption || '', parse_mode: 'HTML' });
 }
-function mainMenuKeyboard() {
-  return {
-    reply_markup: {
-      keyboard: [
+function isAdminChat(chatId) {
+  const links = loadLinks();
+  return !!(links['__admin__'] && links['__admin__'].chatId === chatId);
+}
+function mainMenuKeyboard(chatId) {
+  const isAdmin = chatId && isAdminChat(chatId);
+  const rows = isAdmin
+    ? [
+        [{ text: '📬 Richieste' }, { text: '👥 Colleghi' }],
+        [{ text: '📅 Oggi' }, { text: '📆 Domani' }],
+        [{ text: '📊 Statistiche' }, { text: '📢 Broadcast' }],
+        [{ text: 'ℹ️ Aiuto' }, { text: '❌ Annulla' }]
+      ]
+    : [
         [{ text: '📋 Richiedi la mia matrice' }],
         [{ text: 'ℹ️ Aiuto' }, { text: '❌ Annulla' }]
-      ],
-      resize_keyboard: true,
-    }
-  };
+      ];
+  return { reply_markup: { keyboard: rows, resize_keyboard: true } };
 }
 function cancelKeyboard() {
   return { reply_markup: { keyboard: [[{ text: '❌ Annulla' }]], resize_keyboard: true } };
 }
 function removeKeyboard() {
   return { reply_markup: { remove_keyboard: true } };
+}
+
+// ===== MATRIX CALCULATION (port da index.html, solo essenziali) =====
+const M_DAYS = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const M_DIPENDENTE_PATTERN = [
+  { startTime: '14:00', restDays: ['Lun','Dom'] },
+  { startTime: '06:00', restDays: ['Mer','Sab'] },
+  { startTime: '13:30', restDays: ['Ven','Sab'] },
+  { startTime: '15:30', restDays: ['Mar','Dom'] },
+  { startTime: '09:30', restDays: ['Gio','Dom'] },
+  { startTime: '12:00', restDays: ['Sab','Dom'] },
+  { startTime: '14:30', restDays: ['Lun','Dom'] },
+  { startTime: '08:00', restDays: ['Mer','Sab'] },
+  { startTime: '14:00', restDays: ['Ven','Sab'] },
+  { startTime: '16:00', restDays: ['Mar','Dom'] },
+  { startTime: '09:30', restDays: ['Gio','Dom'] },
+  { startTime: '12:30', restDays: ['Sab','Dom'] },
+  { startTime: '15:00', restDays: ['Lun','Dom'] },
+  { startTime: '08:30', restDays: ['Mer','Sab'] },
+  { startTime: '14:30', restDays: ['Ven','Sab'] },
+  { startTime: '18:00', restDays: ['Mar','Dom'] },
+  { startTime: '10:00', restDays: ['Gio','Dom'] },
+  { startTime: '13:00', restDays: ['Sab','Dom'] }
+];
+const M_DIP_OVR = {
+  12: { Sab: '18:00' }, 13: { Dom: '10:00' }, 14: { Dom: '18:00' }, 15: { Sab: '12:00' },
+  16: { Sab: '09:00' }, 0:  { Sab: '14:00' }, 1:  { Dom: '06:00' }, 2:  { Dom: '14:00' },
+  3:  { Sab: '10:00' }, 4:  { Sab: '06:00' }, 6:  { Sab: '16:00' }, 7:  { Dom: '09:00' },
+  8:  { Dom: '16:00' }, 9:  { Sab: '11:00' }, 10: { Sab: '08:00' }
+};
+const M_TUTOR_PATTERN = [
+  { startTime: '12:00', restDays: ['Mer','Sab'], overrides: { Dom: '12:00' } },
+  { startTime: '06:00', restDays: ['Mar','Sab'], overrides: { Dom: '06:00' } },
+  { startTime: '18:00', restDays: ['Mer','Dom'], overrides: { Sab: '18:00' } },
+  { startTime: '15:00', restDays: ['Sab','Dom'] },
+  { startTime: '06:00', restDays: ['Gio','Dom'], overrides: { Sab: '06:00' } },
+  { startTime: '18:00', restDays: ['Lun','Sab'], overrides: { Dom: '18:00' } },
+  { startTime: '12:00', restDays: ['Mar','Dom'], overrides: { Sab: '12:00' } },
+  { startTime: '08:00', restDays: ['Sab','Dom'] },
+  { startTime: '18:00', restDays: ['Mar','Sab'], overrides: { Dom: '18:00' } },
+  { startTime: '12:00', restDays: ['Lun','Sab'], overrides: { Dom: '12:00' } },
+  { startTime: '06:00', restDays: ['Mer','Dom'], overrides: { Sab: '06:00' } },
+  { startTime: '11:00', restDays: ['Sab','Dom'] },
+  { startTime: '12:00', restDays: ['Gio','Dom'], overrides: { Sab: '12:00' } },
+  { startTime: '06:00', restDays: ['Lun','Sab'], overrides: { Dom: '06:00' } },
+  { startTime: '18:00', restDays: ['Gio','Dom'], overrides: { Sab: '18:00' } }
+];
+let M_TEAM_RIENTRO_ANCHORS = { 3:'2026-03-02', 6:'2026-02-23', 7:'2026-02-16', 8:'2026-02-23', 9:'2026-03-02' };
+function parseISO(iso){ const [y,m,d] = String(iso).split('-').map(Number); return new Date(y, (m||1)-1, d||1); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function isoStr(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function addDays(d, n){ const x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function timeToMin(t){ const [h,m] = String(t).split(':').map(Number); return (h||0)*60+(m||0); }
+function minToTime(m){ m = ((m%1440)+1440)%1440; return pad2(Math.floor(m/60))+':'+pad2(m%60); }
+function computeStartEnd(rawStart, durMin){
+  if(!durMin) return { start: rawStart, end: '' };
+  const startStr = String(rawStart);
+  if(startStr === '18:00') return { start: minToTime(1440 - durMin), end: '00:00' };
+  const end = minToTime(timeToMin(startStr) + durMin);
+  if(timeToMin(end) < timeToMin(startStr)) return { start: startStr, end: '00:00' };
+  return { start: startStr, end };
+}
+function isRientroWeek(weekMonday, team){
+  const anchorISO = M_TEAM_RIENTRO_ANCHORS[team];
+  if(!anchorISO || !team) return false;
+  const anchor = parseISO(anchorISO);
+  const diffDays = Math.round((weekMonday.getTime() - anchor.getTime()) / 86400000);
+  return (((diffDays % 42) + 42) % 42) === 0;
+}
+function easterDate(year){
+  const a=year%19, b=Math.floor(year/100), c=year%100, d=Math.floor(b/4), e=b%4;
+  const f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30, i=Math.floor(c/4), k=c%4;
+  const l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31), day=((h+l-7*m+114)%31)+1;
+  return new Date(year, month-1, day);
+}
+function buildHolidayMap(year){
+  const map = new Map();
+  map.set(year+'-01-01','Capodanno'); map.set(year+'-01-06','Epifania');
+  map.set(year+'-04-25','Liberazione'); map.set(year+'-05-01','Festa del Lavoro');
+  map.set(year+'-06-02','Festa della Repubblica'); map.set(year+'-08-15','Ferragosto');
+  map.set(year+'-11-01','Ognissanti'); map.set(year+'-12-08','Immacolata');
+  map.set(year+'-12-25','Natale'); map.set(year+'-12-26','Santo Stefano');
+  map.set(year+'-05-10','San Cataldo');
+  map.set(isoStr(addDays(easterDate(year),1)),'Pasquetta');
+  return map;
+}
+// Equivalente di getScheduleOnDate del client (O(1) calc)
+function getScheduleOnDate(cfg, targetISO){
+  if(!cfg || !cfg.startWeekISO || cfg.anchorPatternIndex === null || cfg.anchorPatternIndex === undefined) return null;
+  const pattern = cfg.role === 'tutor' ? M_TUTOR_PATTERN : M_DIPENDENTE_PATTERN;
+  const specialOvr = cfg.role === 'tutor' ? {} : M_DIP_OVR;
+  const start = parseISO(cfg.startWeekISO);
+  const target = parseISO(targetISO);
+  const diffMs = target.getTime() - start.getTime();
+  if(diffMs < 0) return null;
+  const daysDiff = Math.round(diffMs / 86400000);
+  const weekIdx = Math.floor(daysDiff / 7);
+  const dayIdx = daysDiff % 7;
+  const dayName = M_DAYS[dayIdx];
+  const pIdx = ((cfg.anchorPatternIndex + weekIdx) % pattern.length + pattern.length) % pattern.length;
+  const pat = pattern[pIdx];
+  const isRest = pat.restDays.includes(dayName);
+  const rawStart = ((pat.overrides||{})[dayName]) || ((specialOvr[pIdx]||{})[dayName]) || pat.startTime;
+  const se = computeStartEnd(rawStart, cfg.durationMinutes || 0);
+  const hMap = buildHolidayMap(target.getFullYear());
+  const holidayName = hMap.get(targetISO) || null;
+  const weekStart = addDays(target, -dayIdx);
+  const isRientro = isRientroWeek(weekStart, cfg.team || null) && dayIdx < 5;
+  return { dayName, isRest, start: se.start, end: se.end, isHoliday: !!holidayName, holidayName, isRientro };
+}
+
+// Carica colleghi dal Firestore (userdata/main)
+let _cachedTeam = null;
+let _cachedTeamAt = 0;
+async function loadTeam(){
+  if(_cachedTeam && Date.now() - _cachedTeamAt < 60000) return _cachedTeam;
+  const doc = await fsGet('userdata/main');
+  if(doc){
+    _cachedTeam = Array.isArray(doc.colleghi) ? doc.colleghi : [];
+    if(doc.rientriAnchors && typeof doc.rientriAnchors === 'object'){
+      Object.entries(doc.rientriAnchors).forEach(([k,v])=>{ if(v) M_TEAM_RIENTRO_ANCHORS[Number(k)] = v; });
+    }
+    _cachedTeamAt = Date.now();
+  } else _cachedTeam = [];
+  return _cachedTeam;
+}
+function formatDayShift(day) {
+  if(!day) return '—';
+  if(day.isRest) return '🔴 LIBERO' + (day.holidayName ? ' · ' + day.holidayName : '');
+  let s = day.start + ' – ' + day.end;
+  if(day.isHoliday) s += ' · ' + day.holidayName;
+  if(day.isRientro) s += ' · 🏢 Rientro';
+  return s;
 }
 
 async function handleTelegramUpdate(update) {
@@ -271,6 +414,54 @@ async function handleTelegramUpdate(update) {
     const data = cq.data || '';
     const chatIdCb = cq.message && cq.message.chat ? cq.message.chat.id : null;
     if (!chatIdCb) return;
+    // Azioni admin su richieste via inline keyboard
+    if (data.startsWith('req_approve:') || data.startsWith('req_info:') || data.startsWith('req_reject:')) {
+      if (!isAdminChat(chatIdCb)) {
+        await tgRequest('answerCallbackQuery', { callback_query_id: cq.id, text: '⛔ Solo admin', show_alert: true });
+        return;
+      }
+      const [act, reqId] = data.split(':');
+      const requests = loadRequests();
+      const r = requests.find(x => x.id === reqId);
+      if (!r) {
+        await tgRequest('answerCallbackQuery', { callback_query_id: cq.id, text: 'Richiesta non trovata', show_alert: true });
+        return;
+      }
+      const userChatId = r.from && r.from.chatId;
+      if (act === 'req_approve') {
+        // Quick approve: nessun link auto. Suggerisce all'admin di usare l'app per link
+        r.status = 'approved'; r.awaitingReply = false; r.updatedAt = new Date().toISOString();
+        saveRequests(requests);
+        if (userChatId) {
+          await tgSend(userChatId,
+            '✅ <b>Matrice creata!</b>\n\nLa tua matrice turni è pronta. L\'amministratore ti invierà a breve il link.'
+          );
+        }
+        await tgRequest('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Approvata, manda il link dall\'app' });
+        await tgRequest('editMessageReplyMarkup', { chat_id: chatIdCb, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [[{ text: '✅ APPROVATA', callback_data: 'noop' }]] } });
+      } else if (act === 'req_reject') {
+        r.status = 'rejected'; r.awaitingReply = false; r.updatedAt = new Date().toISOString();
+        saveRequests(requests);
+        if (userChatId) {
+          await tgSend(userChatId, '❌ <b>Richiesta non accolta</b>\n\nL\'amministratore non può creare la matrice al momento. Puoi inviare una nuova richiesta in qualsiasi momento.');
+        }
+        await tgRequest('answerCallbackQuery', { callback_query_id: cq.id, text: '❌ Rifiutata' });
+        await tgRequest('editMessageReplyMarkup', { chat_id: chatIdCb, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [[{ text: '❌ RIFIUTATA', callback_data: 'noop' }]] } });
+      } else if (act === 'req_info') {
+        // Avvia conversazione admin per scrivere messaggio
+        const sessions = loadSessions();
+        sessions[String(chatIdCb)] = { step: 'admin_info_msg', data: { reqId } };
+        saveSessions(sessions);
+        await tgRequest('answerCallbackQuery', { callback_query_id: cq.id, text: 'Scrivi il messaggio' });
+        await tgSend(chatIdCb,
+          `❓ <b>Scrivi cosa serve a ${escapeHtml(r.nome)}:</b>\n\nIl tuo prossimo messaggio sarà inoltrato come richiesta info.\nPremi ❌ Annulla per fermarti.`,
+          cancelKeyboard()
+        );
+      }
+      return;
+    }
+    if (data === 'noop') { await tgRequest('answerCallbackQuery', { callback_query_id: cq.id }); return; }
+
     if (data === 'notif_on' || data === 'notif_off') {
       const enabled = data === 'notif_on';
       const links = loadLinks();
@@ -356,22 +547,233 @@ async function handleTelegramUpdate(update) {
     const links = loadLinks();
     links[code] = { chatId, linkedAt: new Date().toISOString(), name: userName };
     saveLinks(links);
-    await tgSend(chatId, '✅ <b>Collegato!</b>\nRiceverai ogni sera il tuo turno del giorno dopo.', mainMenuKeyboard());
+    await tgSend(chatId, '✅ <b>Collegato!</b>\nRiceverai ogni sera il tuo turno del giorno dopo.', mainMenuKeyboard(chatId));
     return;
   }
 
   // /start senza codice o /menu
   if (text === '/start' || text === '/menu' || text === 'ℹ️ Aiuto' || text === '/help') {
-    await tgSend(chatId,
-      '👋 <b>Benvenuto in Matrice Orari Bot</b>\n\n' +
-      'Comandi disponibili:\n' +
-      '📋 <b>Richiedi la mia matrice</b> — chiedi all\'amministratore di crearti la matrice turni\n' +
-      '🔔 /notifiche — attiva o disattiva le notifiche serali\n' +
-      'ℹ️ <b>Aiuto</b> — mostra questo messaggio\n' +
-      '❌ <b>Annulla</b> — interrompi una richiesta in corso',
-      mainMenuKeyboard()
-    );
+    const isAdmin = isAdminChat(chatId);
+    let helpText = '👋 <b>Benvenuto in Matrice Orari Bot</b>\n\n';
+    if (isAdmin) {
+      helpText += '👑 <b>Sei amministratore</b>\n\n' +
+        '<b>Comandi admin:</b>\n' +
+        '📬 /richieste — richieste matrici pending con azioni rapide\n' +
+        '👥 /colleghi — elenco completo team\n' +
+        '📅 /oggi — chi è in turno oggi\n' +
+        '📆 /domani — chi è in turno domani\n' +
+        '📊 /stats — statistiche team e bot\n' +
+        '📢 /broadcast — messaggio a tutti gli utenti\n\n' +
+        '<b>Comandi generali:</b>\n' +
+        '🔔 /notifiche — gestisci notifiche turno\n' +
+        '📊 /status — il tuo stato\n' +
+        'ℹ️ /help — questo messaggio';
+    } else {
+      helpText += 'Comandi disponibili:\n' +
+        '📋 <b>Richiedi la mia matrice</b> — chiedi all\'amministratore di crearti la matrice turni\n' +
+        '🔔 /notifiche — attiva o disattiva le notifiche serali\n' +
+        '📊 /status — il tuo stato\n' +
+        'ℹ️ <b>Aiuto</b> — mostra questo messaggio\n' +
+        '❌ <b>Annulla</b> — interrompi una richiesta in corso';
+    }
+    await tgSend(chatId, helpText, mainMenuKeyboard(chatId));
     return;
+  }
+
+  // ===== COMANDI ADMIN (solo se autenticato) =====
+  if (isAdminChat(chatId)) {
+    // /richieste o "📬 Richieste"
+    if (text === '/richieste' || text === '📬 Richieste') {
+      const reqs = loadRequests();
+      const pending = reqs.filter(r => r.status === 'pending');
+      if (!pending.length) {
+        await tgSend(chatId, '✨ <b>Nessuna richiesta in attesa.</b>\n\nTotale richieste storiche: ' + reqs.length, mainMenuKeyboard(chatId));
+        return;
+      }
+      await tgSend(chatId, `📬 <b>${pending.length} richieste in attesa</b>\n\nClicca su una per gestirla:`);
+      for (const r of pending.slice(0, 10)) {
+        const dt = new Date(r.createdAt).toLocaleDateString('it-IT', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        const txt = `📝 <b>${escapeHtml(r.nome)}</b>\n` +
+          `👔 ${r.ruolo === 'tutor' ? 'Tutor' : 'Dipendente'} · Team ${r.team}\n` +
+          `🏢 ${escapeHtml(r.rientro)}\n` +
+          `📅 ${dt}\n` +
+          `🆔 <code>${r.id}</code>`;
+        await tgRequest('sendMessage', {
+          chat_id: chatId, text: txt, parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[
+            { text: '✅ Approva', callback_data: 'req_approve:' + r.id },
+            { text: '❓ Info', callback_data: 'req_info:' + r.id },
+            { text: '❌ Rifiuta', callback_data: 'req_reject:' + r.id }
+          ], [
+            { text: '📱 Apri nell\'app', url: (process.env.APP_URL || 'https://amatriciana.onrender.com') + '/?request=' + r.id }
+          ]] }
+        });
+      }
+      if (pending.length > 10) await tgSend(chatId, `(Mostrate prime 10 di ${pending.length})`);
+      return;
+    }
+
+    // /colleghi o "👥 Colleghi"
+    if (text === '/colleghi' || text === '👥 Colleghi') {
+      const team = await loadTeam();
+      if (!team.length) {
+        await tgSend(chatId, '⚠️ Nessun collega nel database.', mainMenuKeyboard(chatId));
+        return;
+      }
+      const byTeam = {};
+      team.forEach(c => {
+        const key = `${c.role === 'tutor' ? 'Tutor' : 'Dipendente'} · Team ${c.team || '—'}`;
+        if (!byTeam[key]) byTeam[key] = [];
+        byTeam[key].push(c);
+      });
+      let out = `👥 <b>${team.length} colleghi nel team</b>\n\n`;
+      Object.keys(byTeam).sort().forEach(k => {
+        out += `<b>${escapeHtml(k)}</b> (${byTeam[k].length})\n`;
+        byTeam[k].forEach(c => {
+          const ok = c.startWeekISO && c.anchorPatternIndex !== null && c.anchorPatternIndex !== undefined;
+          out += `  ${ok ? '✓' : '⚠️'} ${escapeHtml(c.name)} ${c.durationKey ? '(' + c.durationKey + ')' : ''}\n`;
+        });
+        out += '\n';
+      });
+      // Telegram limita testo a ~4096 char, splitta se necessario
+      while (out.length > 4000) {
+        await tgSend(chatId, out.substring(0, 4000));
+        out = out.substring(4000);
+      }
+      if (out) await tgSend(chatId, out, mainMenuKeyboard(chatId));
+      return;
+    }
+
+    // /oggi o "📅 Oggi" — chi è in turno oggi
+    if (text === '/oggi' || text === '📅 Oggi' || text === '/domani' || text === '📆 Domani') {
+      const isDomani = text.includes('omani');
+      const target = addDays(new Date(), isDomani ? 1 : 0);
+      const targetISO = isoStr(target);
+      const dayNames = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+      const team = await loadTeam();
+      const rows = [];
+      team.forEach(c => {
+        if (!c.startWeekISO || c.anchorPatternIndex === null || c.anchorPatternIndex === undefined) return;
+        const day = getScheduleOnDate(c, targetISO);
+        if (!day) return;
+        rows.push({ c, day });
+      });
+      if (!rows.length) {
+        await tgSend(chatId, `📅 <b>${dayNames[target.getDay()]} ${target.getDate()}/${target.getMonth()+1}</b>\n\n⚠️ Nessun collega configurato.`, mainMenuKeyboard(chatId));
+        return;
+      }
+      // Raggruppa per orario
+      const byShift = {};
+      rows.forEach(({c, day}) => {
+        const key = day.isRest ? '🔴 RIPOSO' : formatDayShift(day);
+        if (!byShift[key]) byShift[key] = [];
+        byShift[key].push(c);
+      });
+      let out = `📅 <b>${dayNames[target.getDay()]} ${target.getDate()}/${target.getMonth()+1}</b>\n`;
+      out += isDomani ? '(domani)\n\n' : '(oggi)\n\n';
+      Object.keys(byShift).sort((a,b) => {
+        // Riposi in fondo
+        if (a.startsWith('🔴')) return 1;
+        if (b.startsWith('🔴')) return -1;
+        return a.localeCompare(b);
+      }).forEach(shift => {
+        out += `<b>${shift}</b>\n`;
+        byShift[shift].forEach(c => {
+          out += `  • ${escapeHtml(c.name)} <i>(T${c.team || '—'})</i>\n`;
+        });
+        out += '\n';
+      });
+      while (out.length > 4000) {
+        await tgSend(chatId, out.substring(0, 4000));
+        out = out.substring(4000);
+      }
+      if (out) await tgSend(chatId, out, mainMenuKeyboard(chatId));
+      return;
+    }
+
+    // /stats o "📊 Statistiche"
+    if (text === '/stats' || text === '📊 Statistiche' || text === '/statistiche') {
+      const team = await loadTeam();
+      const reqs = loadRequests();
+      const links = loadLinks();
+      const linkedUsers = Object.keys(links).filter(k => k !== '__admin__' && links[k].chatId).length;
+      const notifEnabled = Object.values(links).filter(l => l.notificationsEnabled === true).length;
+      const configured = team.filter(c => c.startWeekISO && c.anchorPatternIndex !== null && c.anchorPatternIndex !== undefined).length;
+      const tutorN = team.filter(c => c.role === 'tutor').length;
+      const dipN = team.filter(c => c.role !== 'tutor').length;
+      const byTeam = {};
+      team.forEach(c => { byTeam[c.team || 'N/A'] = (byTeam[c.team || 'N/A'] || 0) + 1; });
+      const out = '📊 <b>Statistiche</b>\n\n' +
+        '👥 <b>Team:</b>\n' +
+        `  • Totale colleghi: <b>${team.length}</b>\n` +
+        `  • Configurati: <b>${configured}</b> / ${team.length}\n` +
+        `  • Dipendenti: <b>${dipN}</b> · Tutor: <b>${tutorN}</b>\n\n` +
+        '🏷 <b>Per team:</b>\n' +
+        Object.keys(byTeam).sort().map(t => `  • Team ${t}: <b>${byTeam[t]}</b>`).join('\n') + '\n\n' +
+        '📬 <b>Richieste:</b>\n' +
+        `  • Totali: <b>${reqs.length}</b>\n` +
+        `  • Pending: <b>${reqs.filter(r => r.status==='pending').length}</b>\n` +
+        `  • Approvate: <b>${reqs.filter(r => r.status==='approved').length}</b>\n` +
+        `  • Rifiutate: <b>${reqs.filter(r => r.status==='rejected').length}</b>\n\n` +
+        '🤖 <b>Bot:</b>\n' +
+        `  • Utenti collegati: <b>${linkedUsers}</b>\n` +
+        `  • Con notifiche attive: <b>${notifEnabled}</b>`;
+      await tgSend(chatId, out, mainMenuKeyboard(chatId));
+      return;
+    }
+
+    // /broadcast o "📢 Broadcast" — inizia un broadcast a tutti
+    if (text === '/broadcast' || text === '📢 Broadcast') {
+      sessions[sessionKey] = { step: 'broadcast_msg' };
+      saveSessions(sessions);
+      const links = loadLinks();
+      const recipients = Object.keys(links).filter(k => k !== '__admin__').length;
+      await tgSend(chatId,
+        `📢 <b>Broadcast a ${recipients} utenti</b>\n\n` +
+        'Scrivi il messaggio che vuoi inviare a tutti i colleghi collegati al bot.\n' +
+        '(Solo testo, no foto. Premi ❌ Annulla per fermare.)',
+        cancelKeyboard()
+      );
+      return;
+    }
+
+    // Admin invia messaggio info su richiesta
+    if (session.step === 'admin_info_msg' && text) {
+      const reqId = session.data && session.data.reqId;
+      const requests = loadRequests();
+      const r = requests.find(x => x.id === reqId);
+      if (!r) {
+        await tgSend(chatId, '⚠️ Richiesta non più trovata.', mainMenuKeyboard(chatId));
+        delete sessions[sessionKey]; saveSessions(sessions);
+        return;
+      }
+      r.status = 'needs_info'; r.awaitingReply = true; r.updatedAt = new Date().toISOString();
+      saveRequests(requests);
+      const userChatId = r.from && r.from.chatId;
+      if (userChatId) {
+        await tgSend(userChatId,
+          '📝 <b>Servono ulteriori informazioni</b>\n\n' + escapeHtml(text) +
+          '\n\n💬 <b>Rispondi direttamente qui</b> scrivendo un messaggio o inviando una foto. Tutto quello che scriverai sarà inoltrato all\'amministratore.'
+        );
+      }
+      delete sessions[sessionKey]; saveSessions(sessions);
+      await tgSend(chatId, '✅ Messaggio inviato a ' + escapeHtml(r.nome) + '.', mainMenuKeyboard(chatId));
+      return;
+    }
+
+    // Esecuzione broadcast
+    if (session.step === 'broadcast_msg' && text) {
+      const links = loadLinks();
+      const targets = Object.entries(links).filter(([k]) => k !== '__admin__');
+      let sent = 0, failed = 0;
+      for (const [, link] of targets) {
+        try { await tgSend(link.chatId, '📢 <b>Messaggio dall\'amministratore:</b>\n\n' + text); sent++; }
+        catch { failed++; }
+      }
+      delete sessions[sessionKey]; saveSessions(sessions);
+      await tgSend(chatId, `✅ Broadcast completato: <b>${sent}</b> inviati, <b>${failed}</b> falliti.`, mainMenuKeyboard(chatId));
+      return;
+    }
   }
 
   // /notifiche — toggle notifiche giornaliere
@@ -398,7 +800,7 @@ async function handleTelegramUpdate(update) {
   if (text === '❌ Annulla' || text === '/annulla' || text === '/cancel') {
     delete sessions[sessionKey];
     saveSessions(sessions);
-    await tgSend(chatId, '❌ Operazione annullata.', mainMenuKeyboard());
+    await tgSend(chatId, '❌ Operazione annullata.', mainMenuKeyboard(chatId));
     return;
   }
 
@@ -506,7 +908,7 @@ async function handleTelegramUpdate(update) {
       `• Team: <b>${request.team}</b>\n` +
       `• Rientro: <b>${escapeHtml(request.rientro)}</b>\n\n` +
       "L'amministratore ti contatterà appena la matrice sarà pronta. Riceverai poi le notifiche turno quotidiane.",
-      mainMenuKeyboard()
+      mainMenuKeyboard(chatId)
     );
 
     // Inoltra all'admin
@@ -589,7 +991,7 @@ async function handleTelegramUpdate(update) {
   // Default: messaggio generico
   await tgSend(chatId,
     "Non ho capito. Premi <b>📋 Richiedi la mia matrice</b> per iniziare oppure <b>ℹ️ Aiuto</b>.",
-    mainMenuKeyboard()
+    mainMenuKeyboard(chatId)
   );
 }
 
