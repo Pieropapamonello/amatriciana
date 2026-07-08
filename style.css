@@ -993,6 +993,132 @@
       body:not(.is-admin) .app-shell{ padding-left: 0 !important; }
       body:not(.is-admin) .topbar{ padding-left: 20px !important; }
     }
+    /* ===== TOOLBAR MATRICE COLLEGA ===== */
+    .cmx-toolbar{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--stroke);
+      background: var(--ctrl-bg);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .cmx-toolbar-group{
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 2px;
+    }
+    .cmx-toolbar-spacer{ flex: 1 1 auto; }
+    .cmx-year-btn{
+      width: 30px !important;
+      height: 30px !important;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .cmx-year-btn i{ font-size: 12px !important; }
+    .cmx-year-label{
+      font-size: 14px;
+      font-weight: 800;
+      min-width: 48px;
+      text-align: center;
+      letter-spacing: -0.3px;
+    }
+    .cmx-today-btn{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cmx-today-btn:hover{ opacity: 0.9; }
+    .cmx-today-btn:active{ transform: translateY(1px); }
+    .cmx-today-btn i{ font-size: 13px; }
+    .cmx-view-toggle{
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .cmx-view-btn{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .cmx-view-btn:hover{ color: var(--accent); }
+    .cmx-view-btn.is-active{
+      background: var(--accent);
+      color: #fff;
+    }
+    .cmx-view-btn i{ font-size: 13px; }
+    .cmx-action-btn{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .cmx-action-btn:hover{ border-color: var(--accent); color: var(--accent); }
+    .cmx-action-btn:active{ transform: translateY(1px); }
+    .cmx-action-btn i{ font-size: 13px; }
+    .cmx-action-btn.cmx-download{
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .cmx-action-btn.cmx-download:hover{ opacity: 0.9; color: #fff; }
+    @media (max-width: 560px){
+      .cmx-toolbar{ gap: 6px; padding: 8px 10px; }
+      .cmx-view-btn span, .cmx-today-btn span, .cmx-action-btn span{ display: none; }
+      .cmx-view-btn, .cmx-action-btn{ padding: 7px 10px; }
+      .cmx-today-btn{ padding: 7px 10px; }
+    }
+    /* Evidenziazione flash del giorno quando si usa "Oggi" */
+    @keyframes todayFlash{
+      0%, 100%{ box-shadow: none; }
+      25%, 75%{ box-shadow: 0 0 0 3px var(--accent) inset; }
+    }
+    .cal-cell.today-flash, .day-row.today-flash, tr.today-flash > td{
+      animation: todayFlash 1.6s ease-in-out 2;
+    }
+
     /* ===== BADGE CONTATORE RICHIESTE ===== */
     .badge-counter{
       position: absolute;
@@ -1486,7 +1612,7 @@
     body.share-mode .card:not(#colleagueMatrixCardView),
     body.share-mode .mobile-tools-sheet,
     body.share-mode .mobile-tools-overlay,
-    body.share-mode #colleagueMatrixModal .icon-btn:not(#saveCollegueMatrixBtn):not(#exportIcsBtn):not(#toggleCalBtn):not(#toggleCardsBtn):not(#toggleTblBtn):not(#colleagueYearPrev):not(#colleagueYearNext){
+    body.share-mode #colleagueMatrixModal .icon-btn:not(#saveCollegueMatrixBtn):not(#exportIcsBtn):not(#toggleCalBtn):not(#toggleCardsBtn):not(#toggleTblBtn):not(#colleagueYearPrev):not(#colleagueYearNext):not(#colleagueTodayBtn){
       display: none !important;
     }
     body.share-mode #closeColleagueMatrixModal{ display: none !important; }

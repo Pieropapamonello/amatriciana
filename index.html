@@ -885,39 +885,40 @@
     <div class="modal-sheet modal-sheet-scroll" style="width:min(720px,100%);">
       <div class="modal-head" style="flex-wrap:wrap;gap:8px;">
         <div class="modal-title" id="colleagueMatrixTitle">Matrice collega</div>
-        <div style="display:flex;align-items:center;gap:2px;">
-          <button class="icon-btn" id="colleagueYearPrev" type="button" title="Anno precedente" style="padding:4px 7px;"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="colleagueYearLabel" style="font-size:15px;font-weight:900;min-width:46px;text-align:center;letter-spacing:-0.5px;">2026</span>
-          <button class="icon-btn" id="colleagueYearNext" type="button" title="Anno successivo" style="padding:4px 7px;"><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="icon-btn" id="closeColleagueMatrixModal" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="cmx-toolbar">
+        <div class="cmx-toolbar-group">
+          <button class="icon-btn cmx-year-btn" id="colleagueYearPrev" type="button" title="Anno precedente" aria-label="Anno precedente"><i class="fa-solid fa-chevron-left"></i></button>
+          <span id="colleagueYearLabel" class="cmx-year-label">2026</span>
+          <button class="icon-btn cmx-year-btn" id="colleagueYearNext" type="button" title="Anno successivo" aria-label="Anno successivo"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <div id="colleagueViewToggle" style="display:flex;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-            <button id="toggleCalBtn" type="button" title="Vista calendario"
-              style="padding:5px 10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-size:12px;font-weight:700;transition:background .15s;">
-              <i class="fa-solid fa-calendar-days"></i>
-            </button>
-            <button id="toggleCardsBtn" type="button" title="Vista schede settimanali"
-              style="padding:5px 10px;border:0;background:#fff;color:#64748b;cursor:pointer;font-size:12px;font-weight:700;transition:background .15s;">
-              <i class="fa-solid fa-layer-group"></i>
-            </button>
-            <button id="toggleTblBtn" type="button" title="Vista tabella"
-              style="padding:5px 10px;border:0;background:#fff;color:#64748b;cursor:pointer;font-size:12px;font-weight:700;transition:background .15s;">
-              <i class="fa-solid fa-table-list"></i>
-            </button>
-          </div>
-          <button class="icon-btn btn-save" id="saveCollegueMatrixBtn" type="button" aria-label="Salva PDF" title="Salva PDF">
-            <i class="fa-solid fa-download"></i>
+        <button class="cmx-today-btn" id="colleagueTodayBtn" type="button" title="Vai al giorno di oggi">
+          <i class="fa-solid fa-location-crosshairs"></i><span>Oggi</span>
+        </button>
+        <div class="cmx-toolbar-spacer"></div>
+        <div class="cmx-view-toggle" id="colleagueViewToggle" role="group" aria-label="Vista">
+          <button id="toggleCalBtn" type="button" class="cmx-view-btn is-active" title="Vista calendario">
+            <i class="fa-solid fa-calendar-days"></i><span>Calendario</span>
           </button>
-          <div id="exportIcsWrap" style="display:none;">
-            <button class="icon-btn" id="exportIcsBtn" type="button" aria-label="Esporta per Google/Apple Calendar" title="Esporta per Google/Apple Calendar (.ics)">
-              <i class="fa-regular fa-calendar-check"></i>
-            </button>
-          </div>
-          <button class="icon-btn" id="permaLinkBtn" type="button" aria-label="Link permanente" title="Link permanente alla matrice">
-            <i class="fa-solid fa-link"></i>
+          <button id="toggleCardsBtn" type="button" class="cmx-view-btn" title="Vista schede" style="display:none;">
+            <i class="fa-solid fa-layer-group"></i>
           </button>
-          <button class="icon-btn" id="closeColleagueMatrixModal" aria-label="Chiudi"><i class="fa-solid fa-xmark"></i></button>
+          <button id="toggleTblBtn" type="button" class="cmx-view-btn" title="Vista tabella">
+            <i class="fa-solid fa-table-list"></i><span>Tabella</span>
+          </button>
         </div>
+        <button class="cmx-action-btn cmx-download" id="saveCollegueMatrixBtn" type="button" aria-label="Scarica PDF" title="Scarica PDF">
+          <i class="fa-solid fa-download"></i><span>PDF</span>
+        </button>
+        <div id="exportIcsWrap" style="display:none;">
+          <button class="cmx-action-btn" id="exportIcsBtn" type="button" aria-label="Esporta calendario (.ics)" title="Esporta per Google/Apple Calendar (.ics)">
+            <i class="fa-regular fa-calendar-check"></i>
+          </button>
+        </div>
+        <button class="cmx-action-btn" id="permaLinkBtn" type="button" aria-label="Link permanente" title="Link permanente alla matrice">
+          <i class="fa-solid fa-link"></i>
+        </button>
       </div>
       <div style="padding:10px 14px 18px;" id="colleagueMatrixBody"></div>
     </div>
@@ -5796,9 +5797,7 @@ function buildHolidayMapForYear(year){
         _allToggleBtns.forEach(id => {
           const btn = document.getElementById(id);
           if(!btn) return;
-          const isActive = id === active;
-          btn.style.setProperty('background', isActive ? 'var(--accent)' : '#fff');
-          btn.style.setProperty('color', isActive ? '#fff' : '#64748b');
+          btn.classList.toggle('is-active', id === active);
         });
       }
       document.getElementById('toggleCalBtn').addEventListener('click', ()=>{
@@ -5815,6 +5814,34 @@ function buildHolidayMapForYear(year){
         _colleagueViewMode = 'table';
         _setColleagueToggle('toggleTblBtn');
         renderColleagueBody();
+      });
+
+      // Bottone "Oggi": va all'anno corrente e scrolla al giorno di oggi
+      document.getElementById('colleagueTodayBtn').addEventListener('click', ()=>{
+        if(!_viewedColleague) return;
+        const nowYear = new Date().getFullYear();
+        if(_colleagueViewYear !== nowYear){
+          _colleagueViewYear = nowYear;
+          _updateColleagueYearLabel();
+          renderColleagueBody();
+        }
+        // Attende il render, poi scrolla alla cella/riga di oggi
+        setTimeout(()=>{
+          const body = document.getElementById('colleagueMatrixBody');
+          if(!body) return;
+          const target = body.querySelector('.cal-cell.cal-today')
+            || body.querySelector('.day-row-today')
+            || body.querySelector('tr.row-today');
+          if(!target){
+            toast('Non trovato', 'Il giorno di oggi non è nella matrice visualizzata.', 'warning');
+            return;
+          }
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.remove('today-flash');
+          void target.offsetWidth;
+          target.classList.add('today-flash');
+          setTimeout(()=> target.classList.remove('today-flash'), 3500);
+        }, 150);
       });
 
       // Stampa: mostra solo vista attiva, apri tutti i details
