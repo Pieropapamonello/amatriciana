@@ -2196,6 +2196,14 @@
     .swap-time-card.stc-sel .stc-start,.swap-time-card.stc-sel .stc-arrow,.swap-time-card.stc-sel .stc-end{color:#fff;opacity:1;}
 
     .search-results{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+    .sr-group-note{font-size:12px;line-height:1.5;color:var(--muted);margin:0 0 14px;}
+    .sr-shift-group{border:1px solid var(--stroke);border-radius:12px;overflow:hidden;margin:12px 0;background:var(--card);}
+    .sr-shift-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:12px 14px;background:var(--ctrl-bg);font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;}
+    .sr-shift-count{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;}
+    .sr-shift-active{border-color:var(--accent);}
+    .sr-shift-active .sr-shift-heading{color:var(--accent);}
+    .sr-shift-group .sr-row{border:0;border-top:1px solid var(--stroke);border-radius:0;min-height:58px;box-sizing:border-box;margin:0;}
+    .sr-shift-group .sr-badge{max-width:45%;white-space:normal;text-align:center;}
     .sr-row{
       display:flex; align-items:center; gap:10px;
       padding:10px 14px; border-radius:12px;
