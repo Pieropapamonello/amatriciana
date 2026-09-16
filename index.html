@@ -3502,7 +3502,7 @@ function buildHolidayMapForYear(year){
         container.appendChild(row);
       }
 
-      function renderGroup(items, label, active = false){
+      function renderGroup(items, label, active = false, sortByTime = false){
         if(!items.length) return;
         const group = document.createElement('section');
         group.className = 'sr-shift-group' + (active ? ' sr-shift-active' : '');
@@ -3510,23 +3510,26 @@ function buildHolidayMapForYear(year){
         hdr.className = 'sr-shift-heading';
         hdr.innerHTML = `<span>${escapeHtml(label)}</span><span class="sr-shift-count">${items.length} ${items.length === 1 ? 'persona' : 'persone'}</span>`;
         group.appendChild(hdr);
-        items.sort((a,b) => a.s.name.localeCompare(b.s.name, 'it', { sensitivity:'base' }));
+        items.sort((a,b) => (sortByTime
+          ? timeToMinutes(a.day.start) - timeToMinutes(b.day.start) || timeToMinutes(a.day.end) - timeToMinutes(b.day.end)
+          : 0) || a.s.name.localeCompare(b.s.name, 'it', { sensitivity:'base' }));
         items.forEach(item => renderRow(item, group));
         el.appendChild(group);
       }
 
       const groups = new Map();
-      [...inTurno, ...fuoriOrario, ...libero].forEach(item => {
+      [...inTurno, ...fuoriOrario].forEach(item => {
         if(!groups.has(item.timeText)) groups.set(item.timeText, []);
         groups.get(item.timeText).push(item);
       });
       const note = document.createElement('p');
       note.className = 'sr-group-note';
-      note.textContent = 'Colleghi raggruppati per orario. Per chi è libero, è indicato l’orario di riferimento della settimana.';
+      note.textContent = 'Colleghi al lavoro raggruppati per orario. I liberi sono nella scheda separata, ordinati per orario settimanale crescente.';
       el.appendChild(note);
       [...groups.entries()]
         .sort((a,b) => timeToMinutes(a[1][0].day.start) - timeToMinutes(b[1][0].day.start) || timeToMinutes(a[1][0].day.end) - timeToMinutes(b[1][0].day.end))
         .forEach(([label, items]) => renderGroup(items, label, items.some(item => item.badgeClass === 'badge-active')));
+      renderGroup(libero, 'Liberi / festivi', false, true);
       renderGroup(fuoriPeriodo, 'Fuori periodo');
     }
 
