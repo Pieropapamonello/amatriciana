@@ -398,7 +398,7 @@
     }
     .cal-grid{
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       border-top: 1px solid var(--stroke);
     }
     .cal-dow{
@@ -415,6 +415,7 @@
     html[data-theme="dark"] .cal-dow{background: rgba(0,0,0,0.14);}
     .cal-dow:last-child{border-right: 0;}
     .cal-cell{
+      min-width: 0;
       min-height: 72px;
       padding: 6px 5px;
       border-right: 1px solid var(--stroke);
@@ -479,9 +480,10 @@
       word-break: break-word;
     }
     .cal-rientro{
-      position: absolute;
-      top: 3px;
-      right: 4px;
+      position: static;
+      margin-top: auto;
+      padding-top: 4px;
+      overflow-wrap: anywhere;
       font-size: 8px;
       font-weight: 900;
       color: #d97706;
@@ -1560,37 +1562,6 @@
       display: inline-block; text-align: center;
     }
 
-    /* ===== ONBOARDING TOUR ===== */
-    .tour-overlay{
-      position: fixed; inset: 0; z-index: 100002;
-      background: rgba(0,0,0,0.70); display: none;
-      align-items: center; justify-content: center; padding: 20px;
-    }
-    .tour-overlay.open{ display: flex; }
-    .tour-card{
-      background: var(--card); border-radius: 12px;
-      padding: 28px; max-width: 440px; width: 100%;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.30);
-      animation: confirmIn .3s cubic-bezier(.34,1.56,.64,1);
-    }
-    .tour-step{ font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .tour-title{ font-size: 22px; font-weight: 800; margin-top: 6px; margin-bottom: 10px; letter-spacing: -0.3px; }
-    .tour-text{ font-size: 14px; line-height: 1.5; color: var(--muted); margin-bottom: 20px; }
-    .tour-text strong{ color: var(--text); }
-    .tour-dots{ display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
-    .tour-dot{ width: 8px; height: 8px; border-radius: 50%; background: var(--stroke); }
-    .tour-dot.active{ background: var(--accent); width: 24px; border-radius: 4px; }
-    .tour-buttons{ display: flex; justify-content: space-between; gap: 10px; }
-    .tour-skip{
-      background: transparent; border: none; color: var(--muted);
-      font-weight: 700; font-size: 13px; cursor: pointer; padding: 8px;
-    }
-    .tour-next{
-      background: var(--accent); color: #fff; border: none;
-      padding: 9px 22px; border-radius: 8px;
-      font-weight: 800; font-size: 13px; cursor: pointer;
-    }
-
     /* ===== QR CODE CONTAINER ===== */
     .qr-container{
       background: #fff;
@@ -1980,7 +1951,21 @@
     }
     @media (max-width: 360px) {
       .calendar-wrap { overflow-x: auto; }
-      .cal-grid { min-width: 320px; }
+      .cal-grid { min-width: 0; }
+    }
+
+    #colleagueMatrixBody .matrix-calendar{min-width:0;max-width:100%;}
+    #colleagueMatrixBody .matrix-cal-title{flex-wrap:wrap;gap:6px;}
+    @media(max-width:480px){
+      #colleagueMatrixBody{padding:8px 6px 14px !important;}
+      #colleagueMatrixBody .matrix-cal-cell{padding:5px 2px !important;min-height:76px !important;}
+      #colleagueMatrixBody .matrix-cal-dow{font-size:10px !important;padding:7px 1px !important;letter-spacing:0 !important;}
+      #colleagueMatrixBody .matrix-cal-time, #colleagueMatrixBody .matrix-cal-end{font-size:11px !important;letter-spacing:-0.3px;font-variant-numeric:tabular-nums;}
+      #colleagueMatrixBody .matrix-cal-rest{font-size:9px !important;letter-spacing:0 !important;}
+      #colleagueMatrixBody .matrix-cal-day{font-size:11px !important;}
+      #colleagueMatrixBody .matrix-cal-holiday{font-size:9px !important;overflow-wrap:anywhere;}
+      #colleagueMatrixBody .matrix-cal-rientro{font-size:7px !important;letter-spacing:0;}
+      #colleagueMatrixBody .matrix-cal-title{padding:10px 8px !important;}
     }
 
     /* CSS Stampa */

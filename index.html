@@ -338,20 +338,6 @@
     </div>
   </div>
 
-  <!-- Onboarding tour -->
-  <div class="tour-overlay" id="tourOverlay">
-    <div class="tour-card">
-      <div class="tour-step" id="tourStepLabel">Passo 1 di 5</div>
-      <div class="tour-title" id="tourTitle">Benvenuto in Matrice Orari</div>
-      <div class="tour-text" id="tourText">Ti guido in 5 passi per impostare l'app.</div>
-      <div class="tour-dots" id="tourDots"></div>
-      <div class="tour-buttons">
-        <button type="button" class="tour-skip" id="tourSkip">Salta</button>
-        <button type="button" class="tour-next" id="tourNext">Avanti</button>
-      </div>
-    </div>
-  </div>
-
     <main class="grid">
       <!-- Guest landing: visibile sempre quando NON sei admin (CSS-driven) -->
       <div class="card guest-card" id="guestCard">
@@ -1503,6 +1489,8 @@ function buildHolidayMapForYear(year){
   map.set(`${year}-05-01`, 'Festa del Lavoro');
   map.set(`${year}-06-02`, 'Festa della Repubblica');
   map.set(`${year}-08-15`, 'Ferragosto');
+  // Legge 151/2025, in vigore dal 1 gennaio 2026.
+  if(year >= 2026) map.set(`${year}-10-04`, "San Francesco d'Assisi");
   map.set(`${year}-11-01`, 'Ognissanti');
   map.set(`${year}-12-08`, 'Immacolata Concezione');
   map.set(`${year}-12-25`, 'Natale');
@@ -2963,6 +2951,7 @@ function buildHolidayMapForYear(year){
         monthMap.get(key).push(d);
       }));
       const container = document.createElement('div');
+      container.className = 'matrix-calendar';
       container.style.cssText = 'background:#f1f5f9; font-family:system-ui,-apple-system,sans-serif; display:flex; flex-direction:column; gap:14px; padding:12px; width:700px; box-sizing:border-box;';
       let _lastRenderedYear = null;
       monthMap.forEach((days, key) => {
@@ -2995,24 +2984,28 @@ function buildHolidayMapForYear(year){
 
         // Month title bar
         const titleEl = document.createElement('div');
+        titleEl.className = 'matrix-cal-title';
         titleEl.style.cssText = 'font-weight:900; font-size:14px; letter-spacing:-0.2px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg,rgba(0,102,204,0.08),rgba(0,102,204,0.06)); border-bottom:1px solid #e2e8f0;';
         titleEl.innerHTML = `<span style="color:#1e293b">${monthName}</span><span style="font-size:11px;font-weight:700;opacity:0.65;color:#1e293b;">${workDays} giorni · ${oreLabel}</span>`;
         card.appendChild(titleEl);
 
         // Grid
         const grid = document.createElement('div');
-        grid.style.cssText = 'display:grid; grid-template-columns:repeat(7,1fr); border-top:1px solid #e2e8f0;';
+        grid.className = 'matrix-cal-grid';
+        grid.style.cssText = 'display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid #e2e8f0;';
 
         // Day-of-week headers
         DOW_LABELS.forEach((dl, i) => {
           const h = document.createElement('div');
+          h.className = 'matrix-cal-dow';
           h.style.cssText = i<6 ? S.dow : S.dowEnd;
           h.textContent = dl; grid.appendChild(h);
         });
 
         const mk = (isLast, bgExtra) => {
           const e = document.createElement('div');
-          e.style.cssText = (isLast ? S.cellEnd : S.cell) + bgExtra;
+          e.className = 'matrix-cal-cell';
+          e.style.cssText = (isLast ? S.cellEnd : S.cell) + bgExtra + 'min-width:0;';
           return e;
         };
 
@@ -3033,24 +3026,28 @@ function buildHolidayMapForYear(year){
           const cell = mk(isLast, bgExtra);
 
           const num = document.createElement('div');
+          num.className = 'matrix-cal-day';
           num.style.cssText = isToday ? S.dayToday : S.dayNum;
           num.textContent = day; cell.appendChild(num);
 
           if(d){
             if(d.isRest){
-              const lib=document.createElement('div'); lib.style.cssText=S.libero; lib.textContent='LIBERO'; cell.appendChild(lib);
+              const lib=document.createElement('div'); lib.className='matrix-cal-rest'; lib.style.cssText=S.libero; lib.textContent='LIBERO'; cell.appendChild(lib);
             } else if(d.isHoliday){
-              const t=document.createElement('div'); t.style.cssText=S.timeRed; t.textContent=d.start; cell.appendChild(t);
-              const te=document.createElement('div'); te.style.cssText=S.timeEndRed; te.textContent=d.end; cell.appendChild(te);
-              const hn=document.createElement('div'); hn.style.cssText=S.hname; hn.textContent=d.holidayName; cell.appendChild(hn);
+              const t=document.createElement('div'); t.className='matrix-cal-time'; t.style.cssText=S.timeRed; t.textContent=d.start; cell.appendChild(t);
+              const te=document.createElement('div'); te.className='matrix-cal-end'; te.style.cssText=S.timeEndRed; te.textContent=d.end; cell.appendChild(te);
             } else {
-              const t=document.createElement('div'); t.style.cssText=S.time; t.textContent=d.start; cell.appendChild(t);
-              const te=document.createElement('div'); te.style.cssText=S.timeEnd; te.textContent=d.end; cell.appendChild(te);
+              const t=document.createElement('div'); t.className='matrix-cal-time'; t.style.cssText=S.time; t.textContent=d.start; cell.appendChild(t);
+              const te=document.createElement('div'); te.className='matrix-cal-end'; te.style.cssText=S.timeEnd; te.textContent=d.end; cell.appendChild(te);
             }
+          }
+          if(d && d.isHoliday){
+            const hn=document.createElement('div'); hn.className='matrix-cal-holiday'; hn.style.cssText=S.hname; hn.textContent=d.holidayName; cell.appendChild(hn);
           }
           if(d && d.isRientro){
             const r=document.createElement('div');
-            r.style.cssText='position:absolute;top:3px;right:4px;font-size:8px;font-weight:900;color:#d97706;letter-spacing:0.06em;text-transform:uppercase;line-height:1;pointer-events:none;';
+            r.className='matrix-cal-rientro';
+            r.style.cssText='position:static;margin-top:auto;padding-top:4px;font-size:8px;font-weight:900;color:#d97706;text-transform:uppercase;line-height:1.2;overflow-wrap:anywhere;';
             r.textContent='Rientro';
             cell.appendChild(r);
           }
@@ -6724,54 +6721,6 @@ function buildHolidayMapForYear(year){
           if(dlg && dlg.classList.contains('open')) dlg.classList.remove('open');
         }
       });
-    })();
-
-    // ===== ONBOARDING TOUR =====
-    (function(){
-      const overlay = document.getElementById('tourOverlay');
-      if(!overlay) return;
-      const steps = [
-        { t: 'Benvenuto in Matrice Orari', x: 'Ti guido in <strong>5 passi rapidi</strong> per configurare l\'app. Puoi saltare quando vuoi.' },
-        { t: 'Accedi come Admin', x: 'Premi l\'icona <strong>logo</strong> in alto a sinistra per inserire la password admin. Solo l\'admin può creare e modificare le matrici.' },
-        { t: 'Aggiungi i tuoi colleghi', x: 'Clicca su <strong>Colleghi</strong> nel menu e aggiungi nome, ruolo, ore e settimana di partenza di ogni operatore.' },
-        { t: 'Genera la matrice', x: 'Compila il wizard (<strong>Ruolo · Team · Ore · Settimana · Orario</strong>) e premi <strong>OK</strong> per visualizzare la matrice settimanale.' },
-        { t: 'Condividi i turni', x: 'Apri la matrice di un collega e premi <i class="fa-solid fa-link"></i> per generare un <strong>link permanente</strong> da condividere via WhatsApp, Telegram o Email. Funziona per sempre.' }
-      ];
-      let cur = 0;
-      function renderTour(){
-        document.getElementById('tourStepLabel').textContent = `Passo ${cur+1} di ${steps.length}`;
-        document.getElementById('tourTitle').textContent = steps[cur].t;
-        document.getElementById('tourText').innerHTML = steps[cur].x;
-        const dots = document.getElementById('tourDots');
-        dots.innerHTML = '';
-        for(let i=0; i<steps.length; i++){
-          const d = document.createElement('div');
-          d.className = 'tour-dot' + (i === cur ? ' active' : '');
-          dots.appendChild(d);
-        }
-        document.getElementById('tourNext').textContent = cur === steps.length-1 ? 'Inizia' : 'Avanti';
-      }
-      function start(){
-        cur = 0; renderTour(); overlay.classList.add('open');
-      }
-      function close(){
-        overlay.classList.remove('open');
-        safeStorageSet('tourSeen', '1');
-      }
-      document.getElementById('tourNext').addEventListener('click', ()=>{
-        if(cur < steps.length-1){ cur++; renderTour(); }
-        else close();
-      });
-      document.getElementById('tourSkip').addEventListener('click', close);
-      overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-      // Mostra tour solo al primo accesso
-      setTimeout(()=>{
-        if(!safeStorageGet('tourSeen') && !document.body.classList.contains('share-mode')){
-          start();
-        }
-      }, 1500);
-      // Esposto per restart manuale via shortcut o impostazioni future
-      window.startTour = start;
     })();
 
     // ===== SKELETON LOADERS =====

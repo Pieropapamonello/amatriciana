@@ -352,6 +352,7 @@ function buildHolidayMap(year){
   map.set(year+'-01-01','Capodanno'); map.set(year+'-01-06','Epifania');
   map.set(year+'-04-25','Liberazione'); map.set(year+'-05-01','Festa del Lavoro');
   map.set(year+'-06-02','Festa della Repubblica'); map.set(year+'-08-15','Ferragosto');
+  if(year >= 2026) map.set(year+'-10-04',"San Francesco d'Assisi");
   map.set(year+'-11-01','Ognissanti'); map.set(year+'-12-08','Immacolata');
   map.set(year+'-12-25','Natale'); map.set(year+'-12-26','Santo Stefano');
   map.set(year+'-05-10','San Cataldo');
