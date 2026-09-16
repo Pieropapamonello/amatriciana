@@ -3477,7 +3477,7 @@ function buildHolidayMapForYear(year){
         } else if(day.isRest || day.isHoliday){
           const bc = day.isHoliday ? 'badge-holiday' : 'badge-rest';
           const bt = day.isHoliday ? `Festivo — ${day.holidayName}` : 'Libero';
-          libero.push({ s, day, badgeClass:bc, badgeText:bt, timeText: day.isHoliday ? `${day.start}–${day.end}` : '' });
+          libero.push({ s, day, badgeClass:bc, badgeText:bt, timeText: `${day.start}–${day.end}` });
         } else {
           const timeText = `${day.start}–${day.end}`;
           if(queryTime && timeInShift(day.start, day.end, queryTime)){
