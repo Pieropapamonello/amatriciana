@@ -2182,6 +2182,24 @@
 
     .search-results{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
     .sr-group-note{font-size:12px;line-height:1.5;color:var(--muted);margin:0 0 14px;}
+    .hub-title{font-size:20px;margin:0;}
+    .hub-sub{font-size:13px;color:var(--muted);margin:6px 0 0;line-height:1.5;}
+    .hub-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:12px;border-bottom:1px solid var(--stroke);}
+    .hub-tabs button{min-height:44px;padding:8px 5px;border:1px solid var(--stroke);border-radius:9px;background:var(--ctrl-bg);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+    .hub-tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
+    #turniHub{scroll-margin-top:80px;}
+    #turniHub > [role="tabpanel"]{border:0;box-shadow:none;margin:0;border-radius:0;}
+    #turniHub [hidden]{display:none !important;}
+    #turniHub #searchDateCard .card-head{display:none;}
+    .hub-advanced{margin-top:20px;border-top:1px solid var(--stroke);padding-top:14px;}
+    .hub-advanced summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:700;}
+    .hub-candidate{margin-top:16px;}
+    .hub-candidate select{max-width:100%;}
+    .sr-name-action{background:none;border:0;padding:4px 0;color:inherit;text-align:left;font-family:inherit;cursor:pointer;}
+    .sr-name-action span{color:var(--muted);margin-left:4px;}
+    .sr-person-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+    .sr-person-actions button{border:1px solid var(--stroke);border-radius:7px;background:var(--ctrl-bg);color:var(--text);font-size:12px;padding:8px;min-height:36px;cursor:pointer;}
+    .hub-tabs button:focus-visible,.sr-name-action:focus-visible,.sr-person-actions button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
     .sr-shift-group{border:1px solid var(--stroke);border-radius:12px;overflow:hidden;margin:12px 0;background:var(--card);}
     .sr-shift-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:12px 14px;background:var(--ctrl-bg);font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;}
     .sr-shift-count{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;}

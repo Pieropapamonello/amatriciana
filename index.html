@@ -57,7 +57,7 @@
     </div>
     <div class="ctrl" id="sidebarCerca" style="display:none;">
       <button class="icon-btn" type="button" aria-label="Cerca" title="Cerca"><i class="fa-solid fa-magnifying-glass"></i></button>
-      <span class="label">Cerca</span>
+      <span class="label">Turni e colleghi</span>
     </div>
     <div class="ctrl" id="sidebarRientri" style="display:none;">
       <button class="icon-btn" type="button" aria-label="Rientri" title="Rientri"><i class="fa-solid fa-building"></i></button>
@@ -96,7 +96,7 @@
             <span class="label">Colleghi</span>
           </div>
           <div class="ctrl" id="cercaOrarioCtrl" style="display:none;">
-            <button class="icon-btn" id="cercaOrarioBtn" type="button" title="Cerca orario" aria-label="Cerca orario">
+            <button class="icon-btn" id="cercaOrarioBtn" type="button" title="Turni e colleghi" aria-label="Turni e colleghi">
               <i class="fa-solid fa-magnifying-glass"></i>
             </button>
             <span class="label">Cerca</span>
@@ -172,7 +172,7 @@
           <i class="fa-solid fa-users"></i><span>Colleghi</span>
         </div>
         <div class="sheet-tool-btn" id="sheetCerca" data-target="cercaOrarioBtn">
-          <i class="fa-solid fa-magnifying-glass"></i><span>Cerca</span>
+          <i class="fa-solid fa-magnifying-glass"></i><span>Turni e colleghi</span>
         </div>
         <div class="sheet-tool-btn" id="sheetRientri" data-target="rientriBtn">
           <i class="fa-solid fa-building"></i><span>Rientri</span>
@@ -562,11 +562,17 @@
         </div>
       </section>
 
-      <!-- Cerca Orario Generico -->
-      <section class="card" id="searchDateCard" style="display:none;">
+      <section class="card" id="turniHub" style="display:none;">
+        <div class="card-head"><div><h2 class="hub-title">Turni e colleghi</h2><p class="hub-sub">Cerca chi lavora, prepara uno scambio o confronta due settimane.</p></div></div>
+        <div class="hub-tabs" role="tablist" aria-label="Turni e colleghi">
+          <button type="button" role="tab" id="tab-searchDateCard" aria-controls="searchDateCard" aria-selected="true" tabindex="0">Chi lavora</button>
+          <button type="button" role="tab" id="tab-swapCard" aria-controls="swapCard" aria-selected="false" tabindex="-1">Scambia turno</button>
+          <button type="button" role="tab" id="tab-compareCard" aria-controls="compareCard" aria-selected="false" tabindex="-1">Confronta</button>
+        </div>
+      <section class="card" id="searchDateCard" role="tabpanel" aria-labelledby="tab-searchDateCard" tabindex="0">
         <div class="card-head">
           <div>
-            <div class="card-title">Cerca Orario Generico</div>
+            <div class="card-title">Chi lavora</div>
             <div class="card-sub">Trova colleghi per ruolo, giorno e fascia oraria.</div>
           </div>
         </div>
@@ -598,9 +604,7 @@
           <div class="search-results" id="searchResults" style="display:none;margin-top:12px;"></div>
         </div>
       </section>
-
-      <!-- Scambi Orari -->
-      <section class="card" id="swapCard" style="display:none;">
+      <section class="card" id="swapCard" role="tabpanel" aria-labelledby="tab-swapCard" tabindex="0" hidden>
         <div class="card-head">
           <div>
             <div class="card-title">Trova uno scambio di turno</div>
@@ -689,6 +693,7 @@
 
               </div>
             </div>
+            <div class="ctrl-item hub-candidate"><label class="control-label" for="swapCandidate">Collega con cui scambiare</label><select class="select-like" id="swapCandidate"><option value="">Tutti i colleghi</option></select></div>
             <div class="swap-actions">
               <p class="swap-step-help">Per cambiare solo orario, seleziona la stessa data nei due riquadri.</p>
               <button class="btn ok-btn" id="swapSearchBtn" type="button">
@@ -697,66 +702,7 @@
             </div>
           </div>
           <div id="swapResult" style="display:none; margin-top:12px;"></div>
-        </div>
-      </section>
-
-      <!-- Smart swap suggestions: scambi compatibili oggi/domani -->
-      <section class="card admin-only-card" id="smartSwapCard" style="display:none;">
-        <div class="card-head">
-          <div>
-            <div class="card-title"><i class="fa-solid fa-bolt" style="color:var(--accent);margin-right:6px;"></i>Suggerimenti Scambi</div>
-            <div class="card-sub">Scambi compatibili per oggi e domani — calcolati automaticamente.</div>
-          </div>
-          <button class="icon-btn" id="smartSwapRefreshBtn" type="button" title="Aggiorna suggerimenti" aria-label="Aggiorna"><i class="fa-solid fa-rotate"></i></button>
-        </div>
-        <div class="card-body" id="smartSwapBody">
-          <div class="empty-state" style="padding:18px 12px;">
-            <div class="empty-state-msg">Genera la tua matrice e aggiungi colleghi per vedere i suggerimenti.</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Dashboard statistiche -->
-      <section class="card" id="statsCard" style="display:none;">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Statistiche</div>
-            <div class="card-sub">Riepilogo mensile dei turni generati.</div>
-          </div>
-        </div>
-        <div class="card-body" id="statsBody"></div>
-      </section>
-
-      <!-- Confronta turni side-by-side -->
-      <section class="card" id="compareCard" style="display:none;">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Confronta i turni di due colleghi</div>
-            <div class="card-sub">Scegli due persone e una data: vedrai i loro turni della settimana fianco a fianco.</div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="controls-grid" style="gap:8px;margin-bottom:10px;">
-            <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Primo collega</span>
-              <select class="select-like" id="compareA" style="width:100%;"><option value="">—</option></select>
-            </div>
-            <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Secondo collega</span>
-              <select class="select-like" id="compareB" style="width:100%;"><option value="">—</option></select>
-            </div>
-            <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Una data della settimana</span>
-              <input type="date" id="compareWeek" class="select-like" style="width:100%;" />
-            </div>
-          </div>
-          <button class="btn primary" id="compareBtn" type="button"><i class="fa-solid fa-columns"></i> Confronta la settimana</button>
-          <div id="compareResult" style="display:none;margin-top:12px;overflow-x:auto;"></div>
-        </div>
-      </section>
-
-      <!-- Trova Collega -->
-      <section class="card" id="findColleagueCard" style="display:none;">
+          <details class="hub-advanced"><summary>Ricerca avanzata per orario</summary>      <section class="card" id="findColleagueCard" >
         <div class="card-head">
           <div>
             <div class="card-title">Trova Collega</div>
@@ -791,7 +737,75 @@
           </div>
           <div id="findColResult" style="display:none;margin-top:12px;"></div>
         </div>
+      </section></details>
+        </div>
       </section>
+      <section class="card" id="compareCard" role="tabpanel" aria-labelledby="tab-compareCard" tabindex="0" hidden>
+        <div class="card-head">
+          <div>
+            <div class="card-title">Confronta i turni di due colleghi</div>
+            <div class="card-sub">Scegli due persone e una data: vedrai i loro turni della settimana fianco a fianco.</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="controls-grid" style="gap:8px;margin-bottom:10px;">
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Primo collega</span>
+              <select class="select-like" id="compareA" style="width:100%;"><option value="">—</option></select>
+            </div>
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Secondo collega</span>
+              <select class="select-like" id="compareB" style="width:100%;"><option value="">—</option></select>
+            </div>
+            <div class="ctrl-item" style="flex:1;min-width:140px;">
+              <span class="control-label">Una data della settimana</span>
+              <input type="date" id="compareWeek" class="select-like" style="width:100%;" />
+            </div>
+          </div>
+          <button class="btn primary" id="compareBtn" type="button"><i class="fa-solid fa-columns"></i> Confronta la settimana</button>
+          <div id="compareResult" style="display:none;margin-top:12px;overflow-x:auto;"></div>
+        </div>
+      </section>
+      </section>
+
+      <!-- Cerca Orario Generico -->
+
+
+      <!-- Scambi Orari -->
+
+
+      <!-- Smart swap suggestions: scambi compatibili oggi/domani -->
+      <section class="card admin-only-card" id="smartSwapCard" style="display:none;">
+        <div class="card-head">
+          <div>
+            <div class="card-title"><i class="fa-solid fa-bolt" style="color:var(--accent);margin-right:6px;"></i>Suggerimenti Scambi</div>
+            <div class="card-sub">Scambi compatibili per oggi e domani — calcolati automaticamente.</div>
+          </div>
+          <button class="icon-btn" id="smartSwapRefreshBtn" type="button" title="Aggiorna suggerimenti" aria-label="Aggiorna"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+        <div class="card-body" id="smartSwapBody">
+          <div class="empty-state" style="padding:18px 12px;">
+            <div class="empty-state-msg">Genera la tua matrice e aggiungi colleghi per vedere i suggerimenti.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard statistiche -->
+      <section class="card" id="statsCard" style="display:none;">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Statistiche</div>
+            <div class="card-sub">Riepilogo mensile dei turni generati.</div>
+          </div>
+        </div>
+        <div class="card-body" id="statsBody"></div>
+      </section>
+
+      <!-- Confronta turni side-by-side -->
+
+
+      <!-- Trova Collega -->
+
 
     </main>
     <footer class="share-footer">
@@ -2348,6 +2362,7 @@ function buildHolidayMapForYear(year){
       const findC = document.getElementById('findColleagueCard');
       const teamC = document.getElementById('teamCard');
       const srchC = document.getElementById('searchDateCard');
+      if(!isAdmin){ document.getElementById('turniHub').style.display = 'none'; document.getElementById('cercaOrarioBtn').classList.remove('active'); }
       if(!isAdmin && swapC) swapC.style.display = 'none';
       if(!isAdmin && findC) findC.style.display = 'none';
       if(!isAdmin && teamC) teamC.style.display = 'none';
@@ -2403,15 +2418,11 @@ function buildHolidayMapForYear(year){
       passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('confirmAdminBtn').click(); });
 
       document.getElementById('cercaOrarioBtn').addEventListener('click', ()=>{
-        const swapC = document.getElementById('swapCard');
-        const findC = document.getElementById('findColleagueCard');
-        const srchC = document.getElementById('searchDateCard');
-        const compC = document.getElementById('compareCard');
-        const btn   = document.getElementById('cercaOrarioBtn');
-        const cards = [swapC, findC, srchC, compC].filter(Boolean);
-        const visible = cards.some(c => c.style.display !== 'none');
-        cards.forEach(c => c.style.display = visible ? 'none' : '');
-        if(btn) btn.classList.toggle('active', !visible);
+        const hub = document.getElementById('turniHub');
+        const visible = hub.style.display !== 'none';
+        hub.style.display = visible ? 'none' : '';
+        document.getElementById('cercaOrarioBtn').classList.toggle('active', !visible);
+        if(!visible) selectTurniTab('searchDateCard');
       });
 
       document.getElementById('orarioColleghiBtn').addEventListener('click', ()=>{
@@ -3428,6 +3439,67 @@ function buildHolidayMapForYear(year){
       return q >= s || q < e;
     }
 
+    function refreshHubColleagues(){
+      ['compareA', 'compareB', 'swapCandidate'].forEach(id => {
+        const select = document.getElementById(id);
+        const value = select.value;
+        select.innerHTML = '';
+        select.add(new Option(id === 'swapCandidate' ? 'Tutti i colleghi' : 'Seleziona un collega', ''));
+        state.colleghi.filter(c => c.startWeekISO && c.anchorPatternIndex != null)
+          .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
+          .forEach(c => select.add(new Option(c.name, c.id)));
+        select.value = value;
+      });
+    }
+
+    function selectTurniTab(id){
+      document.querySelectorAll('#turniHub [role="tab"]').forEach(tab => {
+        const selected = tab.getAttribute('aria-controls') === id;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        const panel = document.getElementById(tab.getAttribute('aria-controls'));
+        panel.hidden = !selected;
+        panel.style.display = selected ? '' : 'none';
+      });
+      refreshHubColleagues();
+      refreshSwapReadiness();
+      document.getElementById('findColleagueCard').style.display = '';
+    }
+
+    function openColleagueAction(item, targetISO, action){
+      refreshHubColleagues();
+      if(action === 'compare'){
+        selectTurniTab('compareCard');
+        const a = document.getElementById('compareA');
+        const b = document.getElementById('compareB');
+        if(!a.value || a.value === item.s.cfg.id) a.value = item.s.cfg.id;
+        else b.value = item.s.cfg.id;
+        if(a.value === b.value) b.value = '';
+        document.getElementById('compareWeek').value = targetISO;
+        document.getElementById('compareResult').style.display = 'none';
+        if(a.value && b.value) document.getElementById('compareBtn').click();
+      } else {
+        selectTurniTab('swapCard');
+        document.getElementById('swapCandidate').value = item.s.cfg.id;
+        if(!state.generated){
+          document.querySelectorAll('#swapRoleSegment button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.role === item.s.cfg.role)));
+        }
+        ['swapMyDate', 'swapTargetDate'].forEach(id => {
+          document.getElementById(id).value = targetISO;
+          document.getElementById(id + 'Lbl').textContent = parseISODate(targetISO).toLocaleDateString('it-IT', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+        });
+        const start = document.getElementById('swapDesiredStart');
+        if(!Array.from(start.options).some(o => o.value === item.day.start)) start.add(new Option(item.day.start, item.day.start));
+        start.value = item.day.start;
+        document.getElementById('swapDesiredEnd').value = item.day.end;
+        document.getElementById('swapDesiredStartLbl').textContent = item.day.start + '–' + item.day.end;
+        document.getElementById('swapResult').style.display = 'none';
+      }
+      const tab = document.querySelector('#turniHub [role="tab"][aria-selected="true"]');
+      tab.focus({ preventScroll:true });
+      document.getElementById('turniHub').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
     // Cerca chi lavora in un dato giorno (e opzionalmente a un dato orario)
     function renderSearchResults(targetISO, queryTime, filterRole){
       const el = document.getElementById('searchResults');
@@ -3495,10 +3567,30 @@ function buildHolidayMapForYear(year){
         row.innerHTML = `
           <div class="sr-avatar">${escapeHtml(initial)}</div>
           <div class="sr-info">
-            <div class="sr-name">${escapeHtml(item.s.name)}</div>
+            ${item.s.cfg.id ? `<button type="button" class="sr-name sr-name-action" aria-expanded="false">${escapeHtml(item.s.name)} <span aria-hidden="true">⌄</span></button>` : `<div class="sr-name">${escapeHtml(item.s.name)}</div>`}
             ${item.day && (item.day.isRest || item.day.isHoliday) ? `<div class="sr-time">${item.timeText} · Orario settimanale</div>` : ''}
           </div>
           <span class="sr-badge ${item.badgeClass}">${item.badgeText}</span>`;
+        if(item.s.cfg.id){
+          const actions = document.createElement('div');
+          actions.className = 'sr-person-actions';
+          actions.hidden = true;
+          const compare = document.createElement('button');
+          compare.type = 'button'; compare.textContent = 'Confronta i turni';
+          compare.addEventListener('click', () => openColleagueAction(item, targetISO, 'compare'));
+          actions.appendChild(compare);
+          if(item.day && !item.day.isRest && !item.day.isHoliday){
+            const swap = document.createElement('button');
+            swap.type = 'button'; swap.textContent = 'Cerca scambio';
+            swap.addEventListener('click', () => openColleagueAction(item, targetISO, 'swap'));
+            actions.appendChild(swap);
+          }
+          row.querySelector('.sr-info').appendChild(actions);
+          row.querySelector('.sr-name-action').addEventListener('click', e => {
+            actions.hidden = !actions.hidden;
+            e.currentTarget.setAttribute('aria-expanded', String(!actions.hidden));
+          });
+        }
         container.appendChild(row);
       }
 
@@ -3524,7 +3616,7 @@ function buildHolidayMapForYear(year){
       });
       const note = document.createElement('p');
       note.className = 'sr-group-note';
-      note.textContent = 'Colleghi al lavoro raggruppati per orario. I liberi sono nella scheda separata, ordinati per orario settimanale crescente.';
+      note.textContent = 'Tocca un nome per confrontare i turni o cercare uno scambio. I liberi sono nella scheda separata, ordinati per orario settimanale crescente.';
       el.appendChild(note);
       [...groups.entries()]
         .sort((a,b) => timeToMinutes(a[1][0].day.start) - timeToMinutes(b[1][0].day.start) || timeToMinutes(a[1][0].day.end) - timeToMinutes(b[1][0].day.end))
@@ -3534,6 +3626,19 @@ function buildHolidayMapForYear(year){
     }
 
     function bindSearchByDate(){
+      const tabs = Array.from(document.querySelectorAll('#turniHub [role="tab"]'));
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTurniTab(tab.getAttribute('aria-controls')));
+        tab.addEventListener('keydown', e => {
+          let next;
+          if(e.key === 'ArrowRight') next = (index + 1) % tabs.length;
+          if(e.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+          if(e.key === 'Home') next = 0;
+          if(e.key === 'End') next = tabs.length - 1;
+          if(next === undefined) return;
+          e.preventDefault(); tabs[next].click(); tabs[next].focus();
+        });
+      });
       const btn = document.getElementById('searchDateBtn');
       const triggerBtn = document.getElementById('searchDateTriggerBtn');
       if(!btn) return;
@@ -3790,8 +3895,9 @@ function buildHolidayMapForYear(year){
       const cfgA = useOwnMatrix ? buildCfgFromState() : null;
       const isBilateral = !!(myISO && myISO !== targetISO);
 
+      const candidateId = container ? '' : document.getElementById('swapCandidate').value;
       const candidates = state.colleghi.filter(c =>
-        c.startWeekISO && c.anchorPatternIndex !== null && c.anchorPatternIndex !== undefined
+        c.startWeekISO && c.anchorPatternIndex !== null && c.anchorPatternIndex !== undefined && (!candidateId || c.id === candidateId)
       );
 
       if(!candidates.length){
