@@ -617,7 +617,7 @@
       <section class="card" id="swapCard" style="display:none;">
         <div class="card-head">
           <div>
-            <div class="card-title">Scambi Orari</div>
+            <div class="card-title">Trova uno scambio di turno</div>
             <div class="card-sub">Verifica se uno scambio di turno con un collega è ammesso dal contratto.</div>
           </div>
         </div>
@@ -628,19 +628,30 @@
           </div>
           <div id="swapForm" style="display:none;">
 
-            <!-- Riga 1: il tuo turno quel giorno -->
-            <div id="swapManualSection" style="display:none; margin-bottom:10px;">
-              <div style="font-size:10px; font-weight:900; opacity:0.5; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">Il tuo turno nel giorno che hai</div>
+            <div class="swap-steps">
+              <div class="swap-step">
+                <h3 class="swap-step-title"><span>1</span> Il turno che offri</h3>
+                <p class="swap-step-help">Indica il turno che vorresti dare al collega.</p>
+              <div class="ctrl-item" style="flex:1 1 150px;min-width:150px;">
+                <span class="control-label">Data del tuo turno</span>
+                <input type="date" id="swapMyDate" style="display:none;" />
+                <button type="button" class="swap-date-trigger" id="swapMyDateBtn">
+                  <i class="fa-regular fa-calendar"></i>
+                  <span id="swapMyDateLbl">Seleziona data</span>
+                </button>
+              </div>
+
+            <div id="swapManualSection" style="display:none;">
               <div class="controls-grid" style="gap:8px;">
                 <div class="ctrl-item">
-                  <span class="control-label">Sei</span>
+                  <span class="control-label">Il tuo ruolo</span>
                   <div class="segmented" id="swapRoleSegment" role="group">
                     <button type="button" data-role="dipendente" aria-pressed="false">Dipendente</button>
                     <button type="button" data-role="tutor" aria-pressed="false">Tutor</button>
                   </div>
                 </div>
                 <div class="ctrl-item">
-                  <span class="control-label">Inizio turno</span>
+                  <span class="control-label">Orario del tuo turno</span>
                   <select id="swapManualStart" style="display:none;">
                     <option value="">-- orario --</option>
                     <option value="06:00">06:00</option>
@@ -659,28 +670,21 @@
               </div>
             </div>
 
-            <!-- Riga 2: date -->
-            <div class="controls-grid" style="gap:8px;">
-              <div class="ctrl-item" style="flex:1 1 150px;min-width:150px;">
-                <span class="control-label">Il giorno che hai</span>
-                <input type="date" id="swapMyDate" style="display:none;" />
-                <button type="button" class="swap-date-trigger" id="swapMyDateBtn">
-                  <i class="fa-regular fa-calendar"></i>
-                  <span id="swapMyDateLbl">Seleziona data</span>
-                </button>
+
               </div>
+              <div class="swap-step swap-step-wanted">
+                <h3 class="swap-step-title"><span>2</span> Il turno che cerchi</h3>
+                <p class="swap-step-help">Scegli quando vorresti lavorare al suo posto.</p>
               <div class="ctrl-item" style="flex:1 1 150px;min-width:150px;">
-                <span class="control-label">Il giorno che vuoi</span>
+                <span class="control-label">Data in cui vuoi lavorare</span>
                 <input type="date" id="swapTargetDate" style="display:none;" />
                 <button type="button" class="swap-date-trigger" id="swapTargetDateBtn">
                   <i class="fa-regular fa-calendar"></i>
                   <span id="swapTargetDateLbl">Seleziona data</span>
                 </button>
               </div>
-            </div>
-            <div class="controls-grid" style="gap:8px;margin-top:4px;">
               <div class="ctrl-item" id="swapDesiredShiftFields">
-                <span class="control-label">Orario desiderato</span>
+                <span class="control-label">Orario che cerchi</span>
                 <select id="swapDesiredStart" style="display:none;">
                   <option value="">-- orario --</option>
                   <option value="06:00">06:00</option>
@@ -696,12 +700,14 @@
                   <span id="swapDesiredStartLbl">Seleziona orario</span>
                 </button>
               </div>
-              <div class="ctrl-item" style="justify-content:flex-end;">
-                <span class="control-label" style="visibility:hidden;">OK</span>
-                <button class="btn ok-btn" id="swapSearchBtn" type="button">
-                  <i class="fa-solid fa-magnifying-glass"></i> Cerca colleghi
-                </button>
+
               </div>
+            </div>
+            <div class="swap-actions">
+              <p class="swap-step-help">Per cambiare solo orario, seleziona la stessa data nei due riquadri.</p>
+              <button class="btn ok-btn" id="swapSearchBtn" type="button">
+                <i class="fa-solid fa-magnifying-glass"></i> Trova colleghi per lo scambio
+              </button>
             </div>
           </div>
           <div id="swapResult" style="display:none; margin-top:12px;"></div>
@@ -739,26 +745,26 @@
       <section class="card" id="compareCard" style="display:none;">
         <div class="card-head">
           <div>
-            <div class="card-title">Confronta Turni</div>
-            <div class="card-sub">Visualizza due colleghi fianco a fianco per una settimana.</div>
+            <div class="card-title">Confronta i turni di due colleghi</div>
+            <div class="card-sub">Scegli due persone e una data: vedrai i loro turni della settimana fianco a fianco.</div>
           </div>
         </div>
         <div class="card-body">
           <div class="controls-grid" style="gap:8px;margin-bottom:10px;">
             <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Collega A</span>
+              <span class="control-label">Primo collega</span>
               <select class="select-like" id="compareA" style="width:100%;"><option value="">—</option></select>
             </div>
             <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Collega B</span>
+              <span class="control-label">Secondo collega</span>
               <select class="select-like" id="compareB" style="width:100%;"><option value="">—</option></select>
             </div>
             <div class="ctrl-item" style="flex:1;min-width:140px;">
-              <span class="control-label">Settimana</span>
+              <span class="control-label">Una data della settimana</span>
               <input type="date" id="compareWeek" class="select-like" style="width:100%;" />
             </div>
           </div>
-          <button class="btn primary" id="compareBtn" type="button"><i class="fa-solid fa-columns"></i> Confronta</button>
+          <button class="btn primary" id="compareBtn" type="button"><i class="fa-solid fa-columns"></i> Confronta la settimana</button>
           <div id="compareResult" style="display:none;margin-top:12px;overflow-x:auto;"></div>
         </div>
       </section>
@@ -4076,8 +4082,8 @@ function buildHolidayMapForYear(year){
         document.getElementById('swapCalModal').style.display='flex';
       }
 
-      document.getElementById('swapMyDateBtn').addEventListener('click',()=>openCal('swapMyDate','Il giorno che hai'));
-      document.getElementById('swapTargetDateBtn').addEventListener('click',()=>openCal('swapTargetDate','Il giorno che vuoi'));
+      document.getElementById('swapMyDateBtn').addEventListener('click',()=>openCal('swapMyDate','Data del tuo turno'));
+      document.getElementById('swapTargetDateBtn').addEventListener('click',()=>openCal('swapTargetDate','Data in cui vuoi lavorare'));
       document.getElementById('swapCalCloseBtn').addEventListener('click',()=>{ document.getElementById('swapCalModal').style.display='none'; });
       document.getElementById('swapCalModal').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
       // Expose for other pickers (e.g. searchDateCard)

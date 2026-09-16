@@ -938,6 +938,28 @@
     .card-sub{display:none !important;}
     .card-title{display:none !important;}
     .hint-strip{display:none !important;}
+    #swapCard .card-title, #compareCard .card-title{display:block !important;font-size:18px;}
+    #swapCard .card-sub, #compareCard .card-sub{display:block !important;line-height:1.5;margin-top:5px;color:var(--muted);}
+    .swap-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+    .swap-step{padding:18px;border:1px solid var(--stroke);border-radius:12px;background:var(--ctrl-bg);min-width:0;}
+    .swap-step-wanted{border-color:var(--accent);}
+    .swap-step-title{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 8px;}
+    .swap-step-title span{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;flex-shrink:0;}
+    .swap-step-help{font-size:13px;line-height:1.5;color:var(--muted);margin:0 0 16px;}
+    #swapForm .swap-step > .ctrl-item{min-width:0 !important;margin-top:14px;}
+    #swapManualSection{margin-top:14px;}
+    #swapManualSection .controls-grid{display:grid;grid-template-columns:1fr;gap:14px !important;}
+    #swapForm .swap-date-trigger, #swapForm .swap-time-trigger{width:100%;min-height:44px;background:var(--card);color:var(--text);}
+    #swapForm .control-label, #compareCard .control-label{font-size:13px;color:var(--text);}
+    .swap-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:18px;}
+    .swap-actions .swap-step-help{margin:0;max-width:390px;}
+    .swap-actions .btn{min-height:44px;flex-shrink:0;}
+    @media(max-width:640px){
+      .swap-steps{grid-template-columns:1fr;gap:12px;}
+      .swap-step{padding:14px;}
+      .swap-actions{flex-direction:column;align-items:stretch;}
+      .swap-actions .btn{width:100%;}
+    }
     .select-like:disabled{opacity: 0.55; cursor:not-allowed;}
     .select-like__left{display:flex; align-items:center; gap: 10px; min-width:0;}
     .select-like__left span{white-space:nowrap; overflow:hidden; text-overflow: ellipsis;}
@@ -2484,4 +2506,3 @@
       .topbar .top-actions .ctrl .label{ display:none; }
       .topbar .tbtn-sep{ display:none; }
     }
-
