@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { decodeCalendarConfig, buildCalendarFeed } = require('./calendar-feed');
 
 const PORT = Number(process.env.PORT) || 7860;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -1001,6 +1002,22 @@ function escapeHtml(s) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.url.startsWith('/api/calendar/')) {
+    try {
+      if (!['GET','HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }
+      const url = new URL(req.url, 'http://localhost');
+      const match = url.pathname.match(/^\/api\/calendar\/([A-Za-z0-9_-]+)\.ics$/);
+      if (!match) throw new Error('Link non valido');
+      const cfg = decodeCalendarConfig(match[1]);
+      const year = url.searchParams.has('year') ? Number(url.searchParams.get('year')) : undefined;
+      const calendar = buildCalendarFeed(cfg, getScheduleOnDate, year);
+      res.writeHead(200, { 'Content-Type':'text/calendar; charset=utf-8', 'Cache-Control':'public, max-age=3600', 'Content-Disposition':'inline; filename="turni.ics"' });
+      res.end(req.method === 'HEAD' ? undefined : calendar);
+    } catch {
+      res.writeHead(400, { 'Content-Type':'text/plain; charset=utf-8' }); res.end('Calendario non valido.');
+    }
+    return;
+  }
   if (req.url === '/api/auth-config') {
     const email    = process.env.FB_EMAIL || '';
     const password = process.env.FB_PASS  || '';

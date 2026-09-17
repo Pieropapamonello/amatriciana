@@ -3,6 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY server.js .
+COPY calendar-feed.js .
 COPY index.html public/index.html
 COPY style.css public/style.css
 COPY manifest.json public/manifest.json

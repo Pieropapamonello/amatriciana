@@ -32,18 +32,14 @@
         </div>
         <div class="share-header-text">
           <div class="share-header-title" id="shareTitle">Matrice Orari</div>
-          <div class="share-header-sub" id="shareSub">Turni condivisi</div>
         </div>
       </div>
       <div class="share-actions">
         <button class="share-action-btn" id="shareToCalBtn" type="button">
           <i class="fa-regular fa-calendar-plus"></i><span>Calendario</span>
         </button>
-        <button class="share-action-btn" id="shareToTgBtn" type="button">
-          <i class="fa-brands fa-telegram"></i><span>Telegram</span>
-        </button>
-        <button class="share-action-btn" id="shareGenericBtn" type="button">
-          <i class="fa-solid fa-share-nodes"></i><span>Condividi</span>
+        <button class="share-action-btn" id="sharePdfBtn" type="button">
+          <i class="fa-solid fa-download"></i><span>Salva PDF</span>
         </button>
       </div>
     </div>
@@ -816,10 +812,20 @@
 
 
     </main>
-    <footer class="share-footer">
-      Powered by <a href="/" target="_blank" rel="noopener">Matrice Orari</a> · Link permanente · Sola lettura
-    </footer>
   </div>
+
+  <dialog id="calendarOptionsDialog" class="calendar-options-dialog" aria-labelledby="calendarOptionsTitle">
+    <div class="calendar-options-head"><h2 id="calendarOptionsTitle">Aggiungi i turni al calendario</h2><button type="button" class="icon-btn" onclick="document.getElementById('calendarOptionsDialog').close()" aria-label="Chiudi">?</button></div>
+    <p>Il collegamento contiene la rotazione di questa matrice e carica anche gli anni successivi.</p>
+    <h3>iPhone ? Calendario Apple</h3>
+    <a class="btn primary" id="calendarAppleLink">Apri in Calendario Apple</a>
+    <p>Conferma l?iscrizione. Se il browser non apre Calendario, usa Safari oppure copia il link e aggiungilo in Calendario ? Calendari ? Aggiungi calendario ? Aggiungi calendario con iscrizione.</p>
+    <h3>Android ? Google Calendar</h3>
+    <p>La prima aggiunta va fatta da computer: Google Calendar ? Altri calendari ? + ? Da URL. Incolla il link, poi usa lo stesso account sul telefono e attiva il calendario nell?app.</p>
+    <button class="btn primary" id="calendarCopyLink" type="button">Copia indirizzo calendario</button>
+    <p>In alternativa puoi scaricare i turni dell?anno visualizzato. Il file va importato in un?app compatibile; non aggiorna automaticamente i turni.</p>
+    <button class="btn" id="calendarDownload" type="button">Scarica file calendario</button>
+  </dialog>
 
   <!-- Modals -->
 
@@ -927,11 +933,11 @@
         </button>
         <div id="exportIcsWrap" style="display:none;">
           <button class="cmx-action-btn" id="exportIcsBtn" type="button" aria-label="Esporta calendario (.ics)" title="Esporta per Google/Apple Calendar (.ics)">
-            <i class="fa-regular fa-calendar-check"></i>
+            <i class="fa-regular fa-calendar-check"></i><span>Aggiungi</span>
           </button>
         </div>
         <button class="cmx-action-btn" id="permaLinkBtn" type="button" aria-label="Link permanente" title="Link permanente alla matrice">
-          <i class="fa-solid fa-link"></i>
+          <i class="fa-solid fa-link"></i><span>Link</span>
         </button>
       </div>
       <div id="colleagueMonthPicker" class="cmx-month-picker" hidden>
@@ -1606,7 +1612,7 @@ function buildHolidayMapForYear(year){
           }
           if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
           cellHtml += `</div>`;
-          html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+          html += `<td data-day="${DAYS[(d.dateObj.getDay()+6)%7]} ${d.dateObj.getDate()}/${d.dateObj.getMonth()+1}" data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
         });
 
         html += '</tr>';
@@ -3007,7 +3013,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
             cellHtml += `</div>`;
-            html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+            html += `<td data-day="${DAYS[(d.dateObj.getDay()+6)%7]} ${d.dateObj.getDate()}/${d.dateObj.getMonth()+1}" data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
           });
           html += '</tr>';
         });
@@ -3053,7 +3059,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
             cellHtml += `</div>`;
-            html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+            html += `<td data-day="${DAYS[(d.dateObj.getDay()+6)%7]} ${d.dateObj.getDate()}/${d.dateObj.getMonth()+1}" data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
           });
           html += '</tr>';
         });
@@ -3239,100 +3245,38 @@ function buildHolidayMapForYear(year){
       };
     }
 
+    function calendarFeedURL(c){
+      const payload = { n:c.name, r:c.role, dm:c.durationMinutes, w:c.startWeekISO, a:c.anchorPatternIndex, t:c.team || null };
+      const token = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      return window.location.origin + '/api/calendar/' + token + '.ics';
+    }
+
     function exportColleagueIcs(){
       if(!_viewedColleague) return;
-      const yearCfg = computeCfgForYear(_viewedColleague, _colleagueViewYear);
-      const yearWeekCount = computeTutorWeekCount(yearCfg.startWeekISO, _colleagueViewYear);
-      const weeks = buildMatrixDataForConfig(yearCfg, yearWeekCount);
-      const name = _viewedColleague.name || 'Collega';
-      const safeName = name.toLowerCase().replace(/\s+/g,'-');
-      const dtstamp = (() => {
-        const d = new Date();
-        const p = n => String(n).padStart(2,'0');
-        return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
-      })();
-      const fold = s => {
-        if(s.length <= 75) return s;
-        const out = [s.slice(0,75)];
-        let rest = s.slice(75);
-        while(rest.length > 74){ out.push(' ' + rest.slice(0,74)); rest = rest.slice(74); }
-        if(rest) out.push(' ' + rest);
-        return out.join('\r\n');
+      const a = document.createElement('a');
+      a.href = calendarFeedURL(_viewedColleague) + '?year=' + _colleagueViewYear;
+      a.download = 'turni-' + _colleagueViewYear + '.ics';
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function openCalendarOptions(){
+      if(!_viewedColleague) return;
+      const url = calendarFeedURL(_viewedColleague);
+      document.getElementById('calendarAppleLink').href = url.replace(/^https?:/, 'webcal:');
+      document.getElementById('calendarCopyLink').onclick = async () => {
+        try { await navigator.clipboard.writeText(url); toast('Link copiato', 'Incollalo in Google Calendar: Altri calendari, Da URL.'); }
+        catch { prompt('Copia indirizzo calendario:', url); }
       };
-      const escapeIcs = s => String(s).replace(/[\\;,]/g, c => '\\'+c).replace(/\n/g, '\\n');
-      const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//Matrice Orari//IT',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
-        fold(`X-WR-CALNAME:Turni ${name} ${_colleagueViewYear}`),
-        'X-WR-TIMEZONE:Europe/Rome',
-        'BEGIN:VTIMEZONE',
-        'TZID:Europe/Rome',
-        'BEGIN:STANDARD',
-        'DTSTART:19701025T030000',
-        'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
-        'TZOFFSETFROM:+0200',
-        'TZOFFSETTO:+0100',
-        'TZNAME:CET',
-        'END:STANDARD',
-        'BEGIN:DAYLIGHT',
-        'DTSTART:19700329T020000',
-        'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
-        'TZOFFSETFROM:+0100',
-        'TZOFFSETTO:+0200',
-        'TZNAME:CEST',
-        'END:DAYLIGHT',
-        'END:VTIMEZONE',
-      ];
-      let eventCount = 0;
-      weeks.forEach(week => {
-        week.days.forEach(day => {
-          if(!day || day.isRest) return;
-          if(day.dateObj.getFullYear() !== _colleagueViewYear) return;
-          const iso = isoDate(day.dateObj);
-          const [yd, md, dd2] = iso.split('-').map(Number);
-          const dateStr = `${yd}${String(md).padStart(2,'0')}${String(dd2).padStart(2,'0')}`;
-          const [sh, sm] = day.start.split(':').map(Number);
-          const startTime = `${dateStr}T${String(sh).padStart(2,'0')}${String(sm).padStart(2,'0')}00`;
-          let endTime;
-          if(day.end === '00:00'){
-            const nextD = addDays(day.dateObj, 1);
-            const nIso = isoDate(nextD);
-            const [ny, nm, nd3] = nIso.split('-').map(Number);
-            endTime = `${ny}${String(nm).padStart(2,'0')}${String(nd3).padStart(2,'0')}T000000`;
-          } else {
-            const [eh, em] = day.end.split(':').map(Number);
-            endTime = `${dateStr}T${String(eh).padStart(2,'0')}${String(em).padStart(2,'0')}00`;
-          }
-          let summary = `Turno ${day.start}\u2013${day.end}`;
-          if(day.isRientro) summary += ' (Rientro)';
-          if(day.isHoliday) summary += ` \u00b7 ${day.holidayName}`;
-          const uid = `${dateStr}-${day.start.replace(':','')}-${safeName}@matrice-orari`;
-          lines.push('BEGIN:VEVENT');
-          lines.push(`UID:${uid}`);
-          lines.push(`DTSTAMP:${dtstamp}`);
-          lines.push(`DTSTART;TZID=Europe/Rome:${startTime}`);
-          lines.push(`DTEND;TZID=Europe/Rome:${endTime}`);
-          lines.push(fold(`SUMMARY:${escapeIcs(summary)}`));
-          lines.push(fold(`DESCRIPTION:${escapeIcs('Turno di '+name+(day.isRientro?' (Rientro in sede)':'')+(day.isHoliday?' \u00b7 '+day.holidayName:''))}`));
-          lines.push('TRANSP:OPAQUE');
-          lines.push('STATUS:CONFIRMED');
-          lines.push('END:VEVENT');
-          eventCount++;
-        });
-      });
-      lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
-      _downloadBlob(blob, `turni-${safeName}-${_colleagueViewYear}.ics`);
-      toast('Esportato!', `${eventCount} turni \u00b7 compatibile iOS, Android, Outlook`);
+      document.getElementById('calendarDownload').textContent = 'Scarica file calendario ' + _colleagueViewYear;
+      document.getElementById('calendarDownload').onclick = exportColleagueIcs;
+      document.getElementById('calendarOptionsDialog').showModal();
     }
 
     async function saveColleaguePng(){
       if(!_viewedColleague){ return; }
-      const btn = document.getElementById('saveCollegueMatrixBtn');
-      if(btn){ const i=btn.querySelector('i'); if(i) i.className='fa-solid fa-spinner fa-spin'; }
+      const buttons = [document.getElementById('saveCollegueMatrixBtn'), document.getElementById('sharePdfBtn')].filter(Boolean);
+      if(buttons.some(btn => btn.disabled)) return;
+      buttons.forEach(btn => { btn.disabled = true; const i=btn.querySelector('i'); if(i) i.className='fa-solid fa-spinner fa-spin'; });
       try{
         const yearCfg = computeCfgForYear(_viewedColleague, _colleagueViewYear);
         const yearWeekCount = computeTutorWeekCount(yearCfg.startWeekISO, _colleagueViewYear);
@@ -3348,7 +3292,7 @@ function buildHolidayMapForYear(year){
       } catch(e){
         toast('Errore', 'Export non riuscito.');
       } finally {
-        if(btn){ const i=btn.querySelector('i'); if(i) i.className='fa-solid fa-download'; }
+        buttons.forEach(btn => { btn.disabled = false; const i=btn.querySelector('i'); if(i) i.className='fa-solid fa-download'; });
       }
     }
     // ===== FINE MATRICE COLLEGA =====
@@ -6014,7 +5958,7 @@ function buildHolidayMapForYear(year){
       });
 
       // Export ICS (Google/Apple Calendar)
-      document.getElementById('exportIcsBtn').addEventListener('click', ()=> exportColleagueIcs());
+      document.getElementById('exportIcsBtn').addEventListener('click', ()=> openCalendarOptions());
       document.getElementById('permaLinkBtn').addEventListener('click', ()=> shareColleagueMatrix(_viewedColleague));
 
       function showShareQR(url, subtitle){
@@ -6139,59 +6083,12 @@ function buildHolidayMapForYear(year){
           // Attiva share-mode: nasconde admin/wizard, mostra solo matrice
           document.body.classList.add('share-mode');
           const titleEl = document.getElementById('shareTitle');
-          const subEl = document.getElementById('shareSub');
           if(titleEl) titleEl.textContent = 'Turni di ' + c.name;
-          if(subEl){
-            const roleLbl = c.role === 'tutor' ? 'Tutor' : 'Dipendente';
-            subEl.textContent = roleLbl + (c.team ? ' · Team ' + c.team : '') + ' · ' + (c.durationKey || '');
-          }
           document.title = 'Turni ' + c.name + ' · Matrice Orari';
           setTimeout(()=> openColleagueMatrix(c), 200);
 
-          // Bind dei bottoni share (Calendario / Telegram / Condividi)
-          const shareUrl = window.location.href;
-          const shareTitle = 'Turni di ' + c.name;
-          const shareText = 'Guarda i turni di ' + c.name + ' su Matrice Orari';
-
-          const calBtn = document.getElementById('shareToCalBtn');
-          if(calBtn) calBtn.addEventListener('click', ()=>{
-            if(typeof exportColleagueIcs === 'function'){
-              exportColleagueIcs();
-              setTimeout(()=>{
-                toast('Importa nel calendario', 'Apri il file scaricato: si aprirà nel tuo calendario (iOS / Android / Outlook).');
-              }, 600);
-            }
-          });
-
-          const tgBtn = document.getElementById('shareToTgBtn');
-          if(tgBtn) tgBtn.addEventListener('click', async ()=>{
-            try{
-              const info = await fetch('/api/telegram/info').then(r=>r.json());
-              if(!info.enabled || !info.botUsername){
-                toast('Telegram non attivo', 'L\'amministratore deve configurare il bot Telegram.');
-                return;
-              }
-              const tgLink = 'https://t.me/'+info.botUsername+'?start='+encodeURIComponent(c.id || ('shared-'+Date.now()));
-              window.open(tgLink, '_blank');
-              toast('Apri Telegram', 'Premi "Avvia" nel bot per ricevere le notifiche turno.');
-            } catch(e){ toast('Errore', 'Impossibile contattare il server.'); }
-          });
-
-          const genBtn = document.getElementById('shareGenericBtn');
-          if(genBtn) genBtn.addEventListener('click', async ()=>{
-            if(navigator.share){
-              try{
-                await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
-              } catch(e){ /* utente ha annullato */ }
-            } else {
-              try{
-                await navigator.clipboard.writeText(shareUrl);
-                toast('Link copiato!', 'Incollalo su WhatsApp, Discord, Email o dove preferisci.');
-              } catch(e){
-                prompt('Copia il link:', shareUrl);
-              }
-            }
-          });
+          document.getElementById('shareToCalBtn').addEventListener('click', openCalendarOptions);
+          document.getElementById('sharePdfBtn').addEventListener('click', saveColleaguePng);
         } catch(e){
           console.warn('share link parse error', e);
           toast('Link non valido', 'Il link condiviso è corrotto o malformato.');
@@ -6202,7 +6099,8 @@ function buildHolidayMapForYear(year){
     // Function to switch to card view for mobile or tablet
     function switchToCardView() {
       const isMobileOrTablet = window.matchMedia("(max-width: 768px)").matches;
-      const matrixElement = document.querySelector('.matrix'); // Assuming the matrix has a class named 'matrix'
+      const matrixElement = document.querySelector('.matrix');
+      if(!matrixElement) return;
 
       if (isMobileOrTablet) {
         matrixElement.classList.add('card-view'); // Add a class to switch to card view

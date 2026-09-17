@@ -1715,8 +1715,36 @@
       .share-header-inner{ flex-direction: column; align-items: stretch; gap: 12px; }
       .share-actions{ justify-content: stretch; gap: 6px; }
       .share-action-btn{ flex: 1; justify-content: center; padding: 10px 8px; font-size: 12px; }
-      .share-action-btn span{ display: none; }
+      .share-action-btn span{ display: block; }
       .share-action-btn i{ font-size: 18px; }
+    }
+
+    body.share-mode #saveCollegueMatrixBtn, body.share-mode #permaLinkBtn, body.share-mode #exportIcsWrap, body.share-mode #colleagueMatrixModal .modal-head{display:none !important;}
+    .share-action-btn{flex-direction:column;gap:6px;min-width:110px;}
+    .cmx-view-btn, .cmx-today-btn, .cmx-action-btn{flex-direction:column;gap:5px;}
+    .cmx-view-btn span, .cmx-today-btn span, .cmx-action-btn span{display:block !important;font-size:10px;line-height:1.2;}
+    .calendar-options-dialog{max-width:520px;width:calc(100% - 32px);box-sizing:border-box;border:1px solid var(--stroke);border-radius:16px;padding:20px;background:var(--card);color:var(--text);max-height:85vh;overflow:auto;}
+    .calendar-options-dialog::backdrop{background:rgba(0,0,0,.45);}
+    .calendar-options-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .calendar-options-dialog h2{font-size:19px;margin:0;}
+    .calendar-options-dialog h3{font-size:15px;margin:20px 0 10px;}
+    .calendar-options-dialog p{font-size:13px;line-height:1.55;color:var(--muted);}
+    .calendar-options-dialog .btn{white-space:normal;text-align:center;}
+    @media(max-width:640px){
+      #colleagueMatrixBody .matrix-container, #matrixTableWrap .matrix-container{overflow:visible !important;}
+      #colleagueMatrixBody .matrix-table, #matrixTableWrap .matrix-table{display:block;width:100%;min-width:0 !important;}
+      #colleagueMatrixBody .matrix-table thead, #matrixTableWrap .matrix-table thead{display:none;}
+      #colleagueMatrixBody .matrix-table tbody, #matrixTableWrap .matrix-table tbody{display:block;}
+      #colleagueMatrixBody .matrix-table tr, #matrixTableWrap .matrix-table tr{display:block;margin-bottom:14px;border:1px solid var(--stroke);border-radius:12px;overflow:hidden;}
+      #colleagueMatrixBody .matrix-table td, #matrixTableWrap .matrix-table td{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0 !important;width:auto !important;position:static !important;padding:10px 12px;border-right:0;box-sizing:border-box;}
+      #colleagueMatrixBody .matrix-table td:first-child, #matrixTableWrap .matrix-table td:first-child{justify-content:center;background:var(--ctrl-bg);color:var(--text);font-size:13px;}
+      #colleagueMatrixBody .matrix-table td[data-day]::before, #matrixTableWrap .matrix-table td[data-day]::before{content:attr(data-day);font-size:13px;font-weight:700;flex-shrink:0;color:var(--muted);}
+      #colleagueMatrixBody .matrix-table .cell-stack, #matrixTableWrap .matrix-table .cell-stack{min-height:0;padding:0;gap:4px;align-items:flex-end;}
+      #colleagueMatrixBody .matrix-table .cell-time, #matrixTableWrap .matrix-table .cell-time{flex-direction:row;gap:8px;font-size:16px;}
+      #colleagueMatrixBody .matrix-table .time-end, #matrixTableWrap .matrix-table .time-end{font-size:16px;}
+      #colleagueMatrixBody .matrix-table .time-end::before, #matrixTableWrap .matrix-table .time-end::before{content:'– ';}
+      #colleagueMatrixBody .matrix-table .holiday-name, #matrixTableWrap .matrix-table .holiday-name{max-width:180px;white-space:normal;font-size:11px;}
+      #colleagueMatrixBody .matrix-table .cal-rientro, #matrixTableWrap .matrix-table .cal-rientro{font-size:10px;}
     }
 
     .share-footer{
