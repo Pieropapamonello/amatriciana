@@ -668,9 +668,16 @@
               </div>
               <div class="swap-step swap-step-wanted">
                 <h3 class="swap-step-title"><span>2</span> Il turno che cerchi</h3>
-                <p class="swap-step-help">Scegli quando vorresti lavorare al suo posto.</p>
+                <p class="swap-step-help">Scegli un altro turno oppure un giorno libero.</p>
+                <div class="ctrl-item">
+                  <label class="control-label" for="swapDesiredType">Cosa cerchi</label>
+                  <select id="swapDesiredType" class="select-like" style="width:100%;">
+                    <option value="shift">Un altro turno</option>
+                    <option value="rest">Giorno libero</option>
+                  </select>
+                </div>
               <div class="ctrl-item" style="flex:1 1 150px;min-width:150px;">
-                <span class="control-label">Data in cui vuoi lavorare</span>
+                <span class="control-label" id="swapTargetDateLabel">Data in cui vuoi lavorare</span>
                 <input type="date" id="swapTargetDate" style="display:none;" />
                 <button type="button" class="swap-date-trigger" id="swapTargetDateBtn">
                   <i class="fa-regular fa-calendar"></i>
@@ -3562,6 +3569,8 @@ function buildHolidayMapForYear(year){
         if(a.value && b.value) document.getElementById('compareBtn').click();
       } else {
         selectTurniTab('swapCard');
+        document.getElementById('swapDesiredType').value = 'shift';
+        updateSwapDesiredType();
         document.getElementById('swapCandidate').value = item.s.cfg.id;
         if(!state.generated){
           document.querySelectorAll('#swapRoleSegment button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.role === item.s.cfg.role)));
@@ -4283,7 +4292,7 @@ function buildHolidayMapForYear(year){
       }
 
       document.getElementById('swapMyDateBtn').addEventListener('click',()=>openCal('swapMyDate','Data del tuo turno'));
-      document.getElementById('swapTargetDateBtn').addEventListener('click',()=>openCal('swapTargetDate','Data in cui vuoi lavorare'));
+      document.getElementById('swapTargetDateBtn').addEventListener('click',()=>openCal('swapTargetDate',document.getElementById('swapTargetDateLabel').textContent));
       document.getElementById('swapCalCloseBtn').addEventListener('click',()=>{ document.getElementById('swapCalModal').style.display='none'; });
       document.getElementById('swapCalModal').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
       // Expose for other pickers (e.g. searchDateCard)
@@ -4992,9 +5001,18 @@ function buildHolidayMapForYear(year){
       document.getElementById('scanApplyBtn').style.display = '';
     }
 
+    function updateSwapDesiredType(){
+      const rest = document.getElementById('swapDesiredType').value === 'rest';
+      document.getElementById('swapDesiredShiftFields').hidden = rest;
+      document.getElementById('swapTargetDateLabel').textContent = rest ? 'Data in cui vuoi essere libero' : 'Data in cui vuoi lavorare';
+      document.getElementById('swapResult').style.display = 'none';
+    }
+
     function initSwap(){
       refreshSwapReadiness();
       initSwapPickers();
+      document.getElementById('swapDesiredType').addEventListener('change', updateSwapDesiredType);
+      updateSwapDesiredType();
 
       // Typed "Sei" segmented (modalità manuale) — pre-seleziona ruolo se già impostato
       if(state.role){
@@ -5030,9 +5048,10 @@ function buildHolidayMapForYear(year){
         const targetDate = document.getElementById('swapTargetDate').value;
         if(!targetDate){ toast('Attenzione', 'Inserisci il giorno che vuoi.'); return; }
 
-        const desiredStart = document.getElementById('swapDesiredStart').value;
-        const desiredEnd   = document.getElementById('swapDesiredEnd').value;
-        if(!desiredStart || !desiredEnd){ toast('Attenzione', 'Seleziona l\'orario desiderato.'); return; }
+        const desiredType = document.getElementById('swapDesiredType').value;
+        const desiredStart = desiredType === 'rest' ? null : document.getElementById('swapDesiredStart').value;
+        const desiredEnd   = desiredType === 'rest' ? null : document.getElementById('swapDesiredEnd').value;
+        if(desiredType === 'shift' && (!desiredStart || !desiredEnd)){ toast('Attenzione', 'Seleziona l\'orario desiderato.'); return; }
 
         const useOwnMatrix = !!(state.generated && state.anchorPatternIndex !== null);
         let myRole = null;
@@ -5052,7 +5071,7 @@ function buildHolidayMapForYear(year){
           if(tStart && tEnd) dayMe = { isRest: false, start: tStart, end: tEnd };
         }
 
-        renderSwapSearch(targetDate, myDate || null, 'shift', desiredStart, desiredEnd, dayMe, myRole);
+        renderSwapSearch(targetDate, myDate || null, desiredType, desiredStart, desiredEnd, dayMe, myRole);
       });
     }
 
