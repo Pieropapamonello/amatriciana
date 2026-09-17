@@ -51,6 +51,10 @@
 
   <!-- Sidebar desktop (visibile da 900px in su) -->
   <aside class="desktop-sidebar" id="desktopSidebar" aria-label="Strumenti">
+    <div class="ctrl" id="sidebarGenerate" style="display:none;">
+      <button class="icon-btn" id="generateSettingsBtn" type="button" aria-label="Genera matrice" title="Genera matrice" aria-controls="settingsCard" aria-expanded="false"><i class="fa-solid fa-calendar-plus"></i></button>
+      <span class="label">Genera matrice</span>
+    </div>
     <div class="ctrl" id="sidebarColleghi" style="display:none;">
       <button class="icon-btn" type="button" aria-label="Colleghi" title="Colleghi"><i class="fa-solid fa-users"></i></button>
       <span class="label">Colleghi</span>
@@ -168,6 +172,9 @@
     <div class="mobile-tools-sheet" id="mobileToolsSheet">
       <div class="sheet-handle"></div>
       <div class="mobile-tools-grid">
+        <div class="sheet-tool-btn" id="sheetGenerate" data-target="generateSettingsBtn">
+          <i class="fa-solid fa-calendar-plus"></i><span>Genera matrice</span>
+        </div>
         <div class="sheet-tool-btn" id="sheetColleghi" data-target="orarioColleghiBtn">
           <i class="fa-solid fa-users"></i><span>Colleghi</span>
         </div>
@@ -382,10 +389,10 @@
         </div>
       </div>
 
-      <section class="card admin-only-card" id="settingsCard">
+      <section class="card admin-only-card" id="settingsCard" hidden>
         <div class="card-head">
           <div>
-            <div class="card-title">Impostazioni</div>
+            <div class="card-title">Genera matrice</div>
             <div class="card-sub">Segui i passaggi per generare la matrice.</div>
           </div>
         </div>
@@ -2337,6 +2344,11 @@ function buildHolidayMapForYear(year){
 
     function updateAdminUI(){
       const isAdmin = isAdminSession();
+      if(!isAdmin){
+        document.getElementById('settingsCard').hidden = true;
+        document.getElementById('generateSettingsBtn').setAttribute('aria-expanded', 'false');
+        document.getElementById('generateSettingsBtn').classList.remove('active');
+      }
       document.body.classList.toggle('is-admin', isAdmin);
       updateGuestState();
       // Lock button (in topbar)
@@ -2383,6 +2395,15 @@ function buildHolidayMapForYear(year){
     }
 
     function bindAdminModal(){
+      document.getElementById('sidebarGenerate').addEventListener('click', () => {
+        if(!isAdminSession()) return;
+        const card = document.getElementById('settingsCard');
+        card.hidden = !card.hidden;
+        const btn = document.getElementById('generateSettingsBtn');
+        btn.setAttribute('aria-expanded', String(!card.hidden));
+        btn.classList.toggle('active', !card.hidden);
+        if(!card.hidden) card.scrollIntoView({ behavior:'smooth', block:'start' });
+      });
       const modal = document.getElementById('adminModal');
       document.getElementById('closeAdminModal').addEventListener('click', ()=>closeModal('adminModal'));
       document.getElementById('cancelAdminBtn').addEventListener('click', ()=>closeModal('adminModal'));
@@ -6294,7 +6315,7 @@ function buildHolidayMapForYear(year){
       // Sync visibility con admin session
       function syncSidebar(){
         const isAdmin = (function(){ try{ return sessionStorage.getItem('adminSession')==='1'; }catch{ return false; } })();
-        Object.keys(map).forEach(id => {
+        [...Object.keys(map), 'sidebarGenerate'].forEach(id => {
           const el = document.getElementById(id);
           if(el) el.style.display = isAdmin ? '' : 'none';
         });

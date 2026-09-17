@@ -939,6 +939,10 @@
     .ctrl-item .ok-btn{ flex:0 0 auto; min-height:40px; padding:0 18px; border-radius:11px; font-size:13px; }
     .card-sub{display:none !important;}
     .card-title{display:none !important;}
+    #settingsCard[hidden]{display:none !important;}
+    #settingsCard{scroll-margin-top:90px;}
+    #settingsCard .card-title{display:block !important;font-size:18px;}
+    #settingsCard .card-sub{display:block !important;line-height:1.5;margin-top:5px;}
     .hint-strip{display:none !important;}
     #swapCard .card-title, #compareCard .card-title{display:block !important;font-size:18px;}
     #swapCard .card-sub, #compareCard .card-sub{display:block !important;line-height:1.5;margin-top:5px;color:var(--muted);}
