@@ -1957,6 +1957,15 @@
     #colleagueMatrixBody .matrix-calendar{min-width:0;max-width:100%;}
     #colleagueMatrixBody [data-matrix-year] + [data-matrix-year]{margin-top:18px;}
     .matrix-load-more{display:block;width:100%;min-height:44px;margin-top:16px;padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--ctrl-bg);color:var(--accent);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+    .cmx-month-trigger{border:0;background:transparent;color:inherit;font-family:inherit;cursor:pointer;min-height:40px;}
+    .cmx-month-picker{padding:14px;border-bottom:1px solid var(--stroke);background:var(--card);}
+    .cmx-month-picker[hidden]{display:none;}
+    .cmx-month-picker label{font-size:13px;font-weight:700;margin-right:12px;}
+    .cmx-month-picker input{width:100px;padding:8px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);color:var(--text);}
+    .cmx-month-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;}
+    .cmx-month-options button{min-height:42px;border:1px solid var(--stroke);border-radius:8px;background:var(--ctrl-bg);color:var(--text);font:inherit;font-size:12px;cursor:pointer;}
+    .cmx-month-options button:disabled{opacity:.4;cursor:default;}
+    .matrix-cal-today.today-flash{outline:2px solid var(--accent);outline-offset:-2px;}
     #colleagueMatrixBody .matrix-cal-title{flex-wrap:wrap;gap:6px;}
     @media(max-width:480px){
       #colleagueMatrixBody{padding:8px 6px 14px !important;}
@@ -2090,6 +2099,11 @@
     .colleague-name{ font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .colleague-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
     .colleague-actions{ display:flex; gap:4px; flex-shrink:0; }
+    .share-matrix{flex-shrink:0;}
+    @media(max-width:480px){
+      .colleague-row{flex-wrap:wrap;}
+      .colleague-quick-actions{flex-basis:100%;justify-content:flex-end;}
+    }
     .btn-icon-sm{
       width:30px; height:30px; border-radius:8px; border:1px solid var(--stroke);
       background:none; cursor:pointer; display:grid; place-items:center;

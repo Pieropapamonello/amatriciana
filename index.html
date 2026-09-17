@@ -896,7 +896,7 @@
       <div class="cmx-toolbar">
         <div class="cmx-toolbar-group">
           <button class="icon-btn cmx-year-btn" id="colleagueYearPrev" type="button" title="Anno precedente" aria-label="Anno precedente"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="colleagueYearLabel" class="cmx-year-label">2026</span>
+          <button type="button" id="colleagueYearLabel" class="cmx-year-label cmx-month-trigger" aria-expanded="false" aria-controls="colleagueMonthPicker" title="Scegli anno e mese">2026</button>
           <button class="icon-btn cmx-year-btn" id="colleagueYearNext" type="button" title="Anno successivo" aria-label="Anno successivo"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
         <button class="cmx-today-btn" id="colleagueTodayBtn" type="button" title="Vai al giorno di oggi">
@@ -925,6 +925,11 @@
         <button class="cmx-action-btn" id="permaLinkBtn" type="button" aria-label="Link permanente" title="Link permanente alla matrice">
           <i class="fa-solid fa-link"></i>
         </button>
+      </div>
+      <div id="colleagueMonthPicker" class="cmx-month-picker" hidden>
+        <label for="colleagueMonthYear">Vai al mese</label>
+        <input type="number" id="colleagueMonthYear" required min="1900" max="9999" step="1" aria-label="Anno da visualizzare" />
+        <div id="colleagueMonthOptions" class="cmx-month-options"></div>
       </div>
       <div style="padding:10px 14px 18px;" id="colleagueMatrixBody"></div>
     </div>
@@ -1593,7 +1598,7 @@ function buildHolidayMapForYear(year){
           }
           if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
           cellHtml += `</div>`;
-          html += `<td${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+          html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
         });
 
         html += '</tr>';
@@ -2651,8 +2656,9 @@ function buildHolidayMapForYear(year){
               <div class="colleague-name">${escapeHtml(c.name)}</div>
               <div class="colleague-meta">${metaParts.join(' · ')}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:4px;">
+            <div class="colleague-quick-actions" style="display:flex;align-items:center;gap:4px;">
               <button class="btn-icon-sm view" title="Vedi matrice" data-id="${c.id}"><i class="fa-solid fa-eye"></i></button>
+              <button type="button" class="btn-icon-sm share-matrix" title="Condividi link matrice" aria-label="Condividi link matrice"><i class="fa-solid fa-link"></i></button>
               <button class="btn-icon-sm tg" title="Collega Telegram" data-id="${c.id}" style="color:#229ED9;"><i class="fa-brands fa-telegram"></i></button>
               <div class="colleague-actions" ${isAdmin ? '' : 'style="display:none"'}>
                 <button class="btn-icon-sm edit" title="Modifica" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
@@ -2663,6 +2669,7 @@ function buildHolidayMapForYear(year){
           row.querySelector('.view').addEventListener('click', () => openColleagueMatrix(c));
           row.querySelector('.colleague-info').addEventListener('click', () => openColleagueMatrix(c));
           row.querySelector('.tg').addEventListener('click', () => connectTelegram(c));
+          row.querySelector('.share-matrix').addEventListener('click', () => shareColleagueMatrix(c));
           if(isAdmin){
             row.querySelector('.edit').addEventListener('click', () => openColleagueModal(c.id));
             row.querySelector('.del').addEventListener('click', async () => {
@@ -2687,6 +2694,61 @@ function buildHolidayMapForYear(year){
     }
 
     // ===== MATRICE COLLEGA =====
+    function shareColleagueMatrix(c){
+      if(!c || !c.startWeekISO || c.anchorPatternIndex == null){
+        toast('Configurazione incompleta', 'Configura prima la matrice del collega.'); return;
+      }
+      const payload = { n:c.name, r:c.role, d:c.durationKey, dm:c.durationMinutes, w:c.startWeekISO, a:c.anchorPatternIndex, t:c.team || null };
+      const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      window.showShareQR(window.location.origin + window.location.pathname + '#share=' + b64, 'Turni di ' + c.name);
+    }
+
+    function renderColleagueMonthOptions(){
+      const input = document.getElementById('colleagueMonthYear');
+      const year = Number(input.value);
+      const options = document.getElementById('colleagueMonthOptions');
+      options.innerHTML = '';
+      if(!input.checkValidity() || !Number.isInteger(year)) return;
+      MONTHS.forEach((month, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = month;
+        btn.disabled = new Date(year, index + 1, 0) < parseISODate(_viewedColleague.startWeekISO);
+        btn.addEventListener('click', () => {
+          const first = isoDate(new Date(year, index, 1));
+          navigateColleagueDate(first < _viewedColleague.startWeekISO ? _viewedColleague.startWeekISO : first);
+        });
+        options.appendChild(btn);
+      });
+    }
+
+    function navigateColleagueDate(iso, highlight = false){
+      if(!_viewedColleague) return;
+      if(iso < _viewedColleague.startWeekISO){
+        toast('Fuori periodo', 'La matrice inizia il ' + parseISODate(_viewedColleague.startWeekISO).toLocaleDateString('it-IT')); return;
+      }
+      document.getElementById('colleagueMonthPicker').hidden = true;
+      document.getElementById('colleagueYearLabel').setAttribute('aria-expanded', 'false');
+      _colleagueViewYear = parseISODate(iso).getFullYear();
+      _updateColleagueYearLabel();
+      renderColleagueBody();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const body = document.getElementById('colleagueMatrixBody');
+        const target = body.querySelector('[data-date="' + iso + '"]') || (highlight ? body.querySelector('.day-row-today') : null);
+        if(!target) return;
+        for(let p = target.parentElement; p && p !== body; p = p.parentElement){ if(p.tagName === 'DETAILS') p.open = true; }
+        const root = body.closest('.modal-sheet');
+        const toolbar = document.querySelector('#colleagueMatrixModal .cmx-toolbar');
+        const offset = (toolbar ? toolbar.offsetHeight : 0) + 16;
+        if(root){
+          root.scrollTo({ top:root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - offset, behavior:'instant' });
+        } else target.scrollIntoView({ block:'center' });
+        if(highlight){
+          target.classList.add('today-flash');
+          setTimeout(() => target.classList.remove('today-flash'), 3500);
+        }
+      }));
+    }
+
     let _viewedColleague = null;
     let _aiApiKey = '';
     fetch('/api/gemini-key').then(r=>r.json()).then(d=>{ if(d.key) _aiApiKey = d.key; }).catch(()=>{});
@@ -2711,6 +2773,8 @@ function buildHolidayMapForYear(year){
       const body = document.getElementById('colleagueMatrixBody');
       if(!body || !_viewedColleague) return;
       if(_colleagueScrollCleanup) _colleagueScrollCleanup();
+      document.getElementById('colleagueMonthPicker').hidden = true;
+      document.getElementById('colleagueYearLabel').setAttribute('aria-expanded', 'false');
       body.innerHTML = '';
       const root = body.closest('.modal-sheet');
       if(root) root.scrollTop = 0;
@@ -2806,6 +2870,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) rightHTML += `<div class="cal-rientro">Rientro</div>`;
             const row = document.createElement('div');
+            row.dataset.date = isoDate(d.dateObj);
             row.className = `day-row${isToday ? ' day-row-today' : ''}`;
             if(isToday) row.style.cssText = 'outline:2px solid var(--accent);outline-offset:-2px;border-radius:14px;';
             row.innerHTML = `<div class="day-left"><div class="day-name">${d.dayName}</div><div class="day-date">${dateTxt}</div></div><div class="day-right">${rightHTML}</div>`;
@@ -2861,6 +2926,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) rightHTML += `<div class="cal-rientro">Rientro</div>`;
             const row = document.createElement('div');
+            row.dataset.date = isoDate(d.dateObj);
             row.className = `day-row${isToday ? ' day-row-today' : ''}`;
             if(isToday) row.style.cssText = 'outline:2px solid var(--accent);outline-offset:-2px;border-radius:14px;';
             row.innerHTML = `<div class="day-left"><div class="day-name">${d.dayName}</div><div class="day-date">${dateTxt}</div></div><div class="day-right">${rightHTML}</div>`;
@@ -2919,7 +2985,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
             cellHtml += `</div>`;
-            html += `<td${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+            html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
           });
           html += '</tr>';
         });
@@ -2965,7 +3031,7 @@ function buildHolidayMapForYear(year){
             }
             if(d.isRientro) cellHtml += `<div class="cal-rientro">Rientro</div>`;
             cellHtml += `</div>`;
-            html += `<td${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
+            html += `<td data-date="${isoDate(d.dateObj)}"${isToday ? ' class="cell-today"' : ''}>${cellHtml}</td>`;
           });
           html += '</tr>';
         });
@@ -3083,6 +3149,7 @@ function buildHolidayMapForYear(year){
           const isLast = ((offsetMon+day-1)%7)===6;
           const bgExtra = d ? (d.isRest ? S.rest : d.isHoliday ? S.holiday : '') : S.empty;
           const cell = mk(isLast, bgExtra);
+          cell.dataset.date = iso;
           if(isToday) cell.classList.add('matrix-cal-today');
 
           const num = document.createElement('div');
@@ -3621,6 +3688,12 @@ function buildHolidayMapForYear(year){
           </div>
           <span class="sr-badge ${item.badgeClass}">${item.badgeText}</span>`;
         if(item.s.cfg.id){
+          const share = document.createElement('button');
+          share.type = 'button'; share.className = 'btn-icon-sm share-matrix';
+          share.title = 'Condividi link matrice'; share.setAttribute('aria-label', 'Condividi matrice di ' + item.s.name);
+          share.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i>';
+          share.addEventListener('click', () => shareColleagueMatrix(item.s.cfg));
+          row.appendChild(share);
           const actions = document.createElement('div');
           actions.className = 'sr-person-actions';
           actions.hidden = true;
@@ -5920,21 +5993,7 @@ function buildHolidayMapForYear(year){
 
       // Export ICS (Google/Apple Calendar)
       document.getElementById('exportIcsBtn').addEventListener('click', ()=> exportColleagueIcs());
-      document.getElementById('permaLinkBtn').addEventListener('click', ()=> {
-        if(!_viewedColleague) return;
-        const payload = {
-          n: _viewedColleague.name,
-          r: _viewedColleague.role,
-          d: _viewedColleague.durationKey,
-          dm: _viewedColleague.durationMinutes,
-          w: _viewedColleague.startWeekISO,
-          a: _viewedColleague.anchorPatternIndex,
-          t: _viewedColleague.team || null
-        };
-        const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-        const url = window.location.origin + window.location.pathname + '#share=' + b64;
-        showShareQR(url, 'Turni di ' + _viewedColleague.name);
-      });
+      document.getElementById('permaLinkBtn').addEventListener('click', ()=> shareColleagueMatrix(_viewedColleague));
 
       function showShareQR(url, subtitle){
         const dialog = document.getElementById('qrDialog');
@@ -5982,33 +6041,22 @@ function buildHolidayMapForYear(year){
         renderColleagueBody();
       });
 
-      // Bottone "Oggi": va all'anno corrente e scrolla al giorno di oggi
-      document.getElementById('colleagueTodayBtn').addEventListener('click', ()=>{
-        if(!_viewedColleague) return;
-        const nowYear = new Date().getFullYear();
-        if(_colleagueViewYear !== nowYear){
-          _colleagueViewYear = nowYear;
-          _updateColleagueYearLabel();
-          renderColleagueBody();
+      document.getElementById('colleagueTodayBtn').addEventListener('click', () => navigateColleagueDate(isoDate(new Date()), true));
+      document.getElementById('colleagueYearLabel').addEventListener('click', () => {
+        const picker = document.getElementById('colleagueMonthPicker');
+        picker.hidden = !picker.hidden;
+        document.getElementById('colleagueYearLabel').setAttribute('aria-expanded', String(!picker.hidden));
+        if(!picker.hidden){
+          const input = document.getElementById('colleagueMonthYear');
+          input.value = _colleagueViewYear;
+          input.min = parseISODate(_viewedColleague.startWeekISO).getFullYear();
+          renderColleagueMonthOptions();
+          const root = picker.closest('.modal-sheet');
+          if(root) root.scrollTop = 0;
+          input.focus({ preventScroll:true });
         }
-        // Attende il render, poi scrolla alla cella/riga di oggi
-        setTimeout(()=>{
-          const body = document.getElementById('colleagueMatrixBody');
-          if(!body) return;
-          const target = body.querySelector('.matrix-cal-today, .cal-cell.cal-today')
-            || body.querySelector('.day-row-today')
-            || body.querySelector('tr.row-today');
-          if(!target){
-            toast('Non trovato', 'Il giorno di oggi non è nella matrice visualizzata.', 'warning');
-            return;
-          }
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          target.classList.remove('today-flash');
-          void target.offsetWidth;
-          target.classList.add('today-flash');
-          setTimeout(()=> target.classList.remove('today-flash'), 3500);
-        }, 150);
       });
+      document.getElementById('colleagueMonthYear').addEventListener('input', renderColleagueMonthOptions);
 
       // Stampa: mostra solo vista attiva, apri tutti i details
       window.addEventListener('beforeprint', () => {
