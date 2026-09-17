@@ -571,6 +571,7 @@
         <div class="hub-tabs" role="tablist" aria-label="Turni e colleghi">
           <button type="button" role="tab" id="tab-searchDateCard" aria-controls="searchDateCard" aria-selected="true" tabindex="0">Chi lavora</button>
           <button type="button" role="tab" id="tab-swapCard" aria-controls="swapCard" aria-selected="false" tabindex="-1">Scambia turno</button>
+          <button type="button" role="tab" id="tab-weekCard" aria-controls="weekCard" aria-selected="false" tabindex="-1">Settimana</button>
           <button type="button" role="tab" id="tab-compareCard" aria-controls="compareCard" aria-selected="false" tabindex="-1">Confronta</button>
         </div>
       <section class="card" id="searchDateCard" role="tabpanel" aria-labelledby="tab-searchDateCard" tabindex="0">
@@ -749,6 +750,22 @@
           <div id="findColResult" style="display:none;margin-top:12px;"></div>
         </div>
       </section></details>
+        </div>
+      </section>
+      <section class="card" id="weekCard" role="tabpanel" aria-labelledby="tab-weekCard" tabindex="0" hidden>
+        <div class="card-body">
+          <h3>La settimana dei colleghi</h3>
+          <p>Scegli una data per vedere tutti i turni dal lunedì alla domenica.</p>
+          <div class="week-controls">
+            <label>Una data della settimana<input type="date" id="hubWeekDate" class="select-like"></label>
+            <button type="button" class="btn" id="hubWeekPrev" aria-label="Settimana precedente">←</button>
+            <button type="button" class="btn" id="hubWeekToday">Questa settimana</button>
+            <button type="button" class="btn" id="hubWeekNext" aria-label="Settimana successiva">→</button>
+            <label>Cerca collega<input type="search" id="hubWeekQuery" class="select-like" placeholder="Nome del collega"></label>
+            <label>Ruolo<select id="hubWeekRole" class="select-like"><option value="">Tutti</option><option value="dipendente">Dipendente</option><option value="tutor">Tutor</option></select></label>
+          </div>
+          <p id="hubWeekSummary" role="status"></p>
+          <div id="hubWeekResults"></div>
         </div>
       </section>
       <section class="card" id="compareCard" role="tabpanel" aria-labelledby="tab-compareCard" tabindex="0" hidden>
@@ -3528,6 +3545,44 @@ function buildHolidayMapForYear(year){
       return q >= s || q < e;
     }
 
+    function renderHubWeek(){
+      const input = document.getElementById('hubWeekDate');
+      if(!input.value) input.value = isoDate(new Date());
+      const selected = parseISODate(input.value);
+      const monday = addDays(selected, -((selected.getDay() + 6) % 7));
+      const dates = Array.from({length:7}, (_, i) => addDays(monday, i));
+      const fmt = d => d.toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit'});
+      const query = document.getElementById('hubWeekQuery').value.trim().toLocaleLowerCase('it');
+      const role = document.getElementById('hubWeekRole').value;
+      const colleagues = state.colleghi.filter(c => (!role || c.role === role) && (c.name || '').toLocaleLowerCase('it').includes(query))
+        .slice().sort((a,b) => (a.name || '').localeCompare(b.name || '', 'it'));
+      document.getElementById('hubWeekSummary').textContent = `${fmt(monday)} – ${fmt(dates[6])} ${dates[6].getFullYear()} · ${colleagues.length} colleghi`;
+      const result = document.getElementById('hubWeekResults');
+      if(!colleagues.length){ result.textContent = 'Nessun collega trovato.'; return; }
+      const labels = dates.map(d => d.toLocaleDateString('it-IT', {weekday:'short'}) + ' ' + fmt(d));
+      result.innerHTML = `<table class="hub-week-table"><caption class="sr-only">Turni settimanali dei colleghi</caption><thead><tr><th scope="col">Collega</th>${labels.map(label => `<th scope="col">${label}</th>`).join('')}</tr></thead><tbody>${colleagues.map((c,index) => `<tr><th scope="row"><button type="button" class="hub-week-name" data-week-colleague="${index}">${escapeHtml(c.name || 'Collega')}</button></th>${dates.map((date,i) => {
+        const day = c.startWeekISO && c.anchorPatternIndex != null ? getScheduleOnDate(c, isoDate(date)) : null;
+        if(!day) return `<td data-label="${labels[i]}"><span>Non disponibile</span></td>`;
+        return `<td data-label="${labels[i]}" class="${day.isRest ? 'hub-week-rest' : ''}"><div><strong>${day.isRest ? 'LIBERO' : day.start + '–' + day.end}</strong>${day.isRest ? `<small>${day.start}–${day.end} · orario di riferimento</small>` : ''}${day.isHoliday ? `<small>${escapeHtml(day.holidayName)}</small>` : ''}${day.isRientro ? '<small class="hub-week-return">Rientro</small>' : ''}</div></td>`;
+      }).join('')}</tr>`).join('')}</tbody></table>`;
+      result.querySelectorAll('[data-week-colleague]').forEach(btn => btn.addEventListener('click', () => openColleagueMatrix(colleagues[Number(btn.dataset.weekColleague)])));
+    }
+
+    function initHubWeek(){
+      ['hubWeekDate', 'hubWeekRole'].forEach(id => document.getElementById(id).addEventListener('change', renderHubWeek));
+      document.getElementById('hubWeekQuery').addEventListener('input', renderHubWeek);
+      const move = delta => {
+        const input = document.getElementById('hubWeekDate');
+        input.value = isoDate(addDays(parseISODate(input.value || isoDate(new Date())), delta));
+        renderHubWeek();
+      };
+      document.getElementById('hubWeekPrev').addEventListener('click', () => move(-7));
+      document.getElementById('hubWeekNext').addEventListener('click', () => move(7));
+      document.getElementById('hubWeekToday').addEventListener('click', () => {
+        document.getElementById('hubWeekDate').value = isoDate(new Date()); renderHubWeek();
+      });
+    }
+
     function refreshHubColleagues(){
       ['compareA', 'compareB', 'swapCandidate'].forEach(id => {
         const select = document.getElementById(id);
@@ -3552,6 +3607,7 @@ function buildHolidayMapForYear(year){
       });
       refreshHubColleagues();
       refreshSwapReadiness();
+      if(id === 'weekCard') renderHubWeek();
       document.getElementById('findColleagueCard').style.display = '';
     }
 
@@ -3723,6 +3779,7 @@ function buildHolidayMapForYear(year){
     }
 
     function bindSearchByDate(){
+      initHubWeek();
       const tabs = Array.from(document.querySelectorAll('#turniHub [role="tab"]'));
       tabs.forEach((tab, index) => {
         tab.addEventListener('click', () => selectTurniTab(tab.getAttribute('aria-controls')));

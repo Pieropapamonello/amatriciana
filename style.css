@@ -2274,6 +2274,27 @@
     .hub-tabs button{min-height:44px;padding:8px 5px;border:1px solid var(--stroke);border-radius:9px;background:var(--ctrl-bg);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
     .hub-tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
     #turniHub{scroll-margin-top:80px;}
+    .week-controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;}
+    .week-controls label{display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:0;}
+    .week-controls input,.week-controls select{max-width:100%;min-height:42px;box-sizing:border-box;}
+    #hubWeekResults{overflow-x:auto;}
+    .hub-week-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;}
+    .hub-week-table th,.hub-week-table td{border:1px solid var(--stroke);padding:12px 7px;text-align:center;overflow-wrap:anywhere;}
+    .hub-week-table th{background:var(--ctrl-bg);}
+    .hub-week-table th:first-child{width:150px;text-align:left;}
+    .hub-week-table small{display:block;margin-top:5px;font-size:11px;color:var(--muted);}
+    .hub-week-name{font:inherit;font-weight:700;color:var(--accent);background:none;border:0;padding:6px 0;cursor:pointer;text-align:left;}
+    .hub-week-rest{background:rgba(245,158,11,.08);}
+    .hub-week-rest strong,.hub-week-table .hub-week-return{color:#b66a00;}
+    @media(max-width:800px){
+      .hub-week-table,.hub-week-table tbody{display:block;width:100%;}
+      .hub-week-table thead{display:none;}
+      .hub-week-table tr{display:block;border:1px solid var(--stroke);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+      .hub-week-table th:first-child{display:block;width:auto;padding:12px;}
+      .hub-week-table td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;border:0;border-top:1px solid var(--stroke);padding:10px 12px;}
+      .hub-week-table td::before{content:attr(data-label);font-weight:600;flex-shrink:0;}
+      .week-controls label{flex:1 1 150px;}
+    }
     #turniHub > [role="tabpanel"]{border:0;box-shadow:none;margin:0;border-radius:0;}
     #turniHub [hidden]{display:none !important;}
     #turniHub #searchDateCard .card-head{display:none;}
