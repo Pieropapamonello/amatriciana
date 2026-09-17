@@ -544,8 +544,11 @@
         </div>
         <div class="card-body">
           <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
-            <input id="teamSearchInput" type="search" placeholder="&#xf002;  Cerca nome..." autocomplete="off"
-              style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:10px;border:1.5px solid var(--stroke,#e2e8f0);background:var(--ctrl-bg);color:var(--text);font-size:13px;font-weight:600;outline:none;font-family:inherit;" />
+            <div style="position:relative;">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></svg>
+              <input id="teamSearchInput" type="search" placeholder="Cerca nome..." aria-label="Cerca collega per nome" autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:8px 12px 8px 36px;border-radius:10px;border:1.5px solid var(--stroke,#e2e8f0);background:var(--ctrl-bg);color:var(--text);font-size:13px;font-weight:600;outline:none;font-family:inherit;" />
+            </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;" id="teamRoleFilter">
               <button class="team-filter-chip active" data-role="all" type="button">Tutti</button>
               <button class="team-filter-chip" data-role="dipendente" type="button">Dipendente</button>
