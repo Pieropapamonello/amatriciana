@@ -1983,6 +1983,44 @@
       #colleagueMatrixBody .matrix-cal-title{padding:10px 8px !important;}
     }
 
+    /* I testi seguono la larghezza reale della cella, anche ridimensionando la finestra. */
+    @supports (container-type: inline-size){
+      #matrixCalendarWrap .cal-grid, #colleagueMatrixBody .matrix-cal-grid{container-type:inline-size;}
+      #matrixCalendarWrap .cal-cell, #colleagueMatrixBody .matrix-cal-cell{
+        container-type:inline-size;
+        min-height:clamp(96px,15cqw,180px) !important;
+        text-align:center;
+      }
+      #matrixCalendarWrap .cal-time, #colleagueMatrixBody .matrix-cal-time{
+        font-size:clamp(11px,29cqw,38px) !important;
+        line-height:1.15 !important;
+        font-variant-numeric:tabular-nums;
+        letter-spacing:-.03em;
+      }
+      #matrixCalendarWrap .cal-time-end, #colleagueMatrixBody .matrix-cal-end{
+        font-size:clamp(10px,27cqw,35px) !important;
+        line-height:1.15 !important;
+        font-variant-numeric:tabular-nums;
+      }
+      #matrixCalendarWrap .cal-day-num, #colleagueMatrixBody .matrix-cal-day{
+        font-size:clamp(10px,16cqw,20px) !important;
+        text-align:left;
+      }
+      #matrixCalendarWrap .cal-libero, #colleagueMatrixBody .matrix-cal-rest{
+        font-size:clamp(9px,22cqw,28px) !important;
+        letter-spacing:0 !important;
+      }
+      #matrixCalendarWrap .cal-rientro, #colleagueMatrixBody .matrix-cal-rientro{
+        font-size:clamp(7px,18cqw,20px) !important;
+        letter-spacing:0 !important;
+        line-height:1.2 !important;
+      }
+      #matrixCalendarWrap .cal-hname, #colleagueMatrixBody .matrix-cal-holiday{
+        font-size:clamp(9px,17cqw,18px) !important;
+        overflow-wrap:anywhere;
+      }
+    }
+
     /* CSS Stampa */
     @media print {
       body { background: #fff !important; padding: 0 !important; padding-bottom: 0 !important; }
