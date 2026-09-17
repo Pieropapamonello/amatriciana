@@ -1955,6 +1955,8 @@
     }
 
     #colleagueMatrixBody .matrix-calendar{min-width:0;max-width:100%;}
+    #colleagueMatrixBody [data-matrix-year] + [data-matrix-year]{margin-top:18px;}
+    .matrix-load-more{display:block;width:100%;min-height:44px;margin-top:16px;padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--ctrl-bg);color:var(--accent);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
     #colleagueMatrixBody .matrix-cal-title{flex-wrap:wrap;gap:6px;}
     @media(max-width:480px){
       #colleagueMatrixBody{padding:8px 6px 14px !important;}
