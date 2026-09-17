@@ -2049,6 +2049,21 @@
       }
     }
 
+    /* Su telefono le righe crescono solo quando festività o rientri lo richiedono. */
+    @media screen and (max-width:640px){
+      #matrixCalendarWrap .cal-cell, #colleagueMatrixBody .matrix-cal-cell{
+        min-height:64px !important;
+        height:auto !important;
+        box-sizing:border-box;
+        padding:4px 2px !important;
+        gap:2px !important;
+      }
+      #matrixCalendarWrap .cal-rientro, #colleagueMatrixBody .matrix-cal-rientro{
+        margin-top:2px !important;
+        padding-top:0 !important;
+      }
+    }
+
     /* CSS Stampa */
     @media print {
       body { background: #fff !important; padding: 0 !important; padding-bottom: 0 !important; }
