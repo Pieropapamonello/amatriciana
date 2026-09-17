@@ -4000,11 +4000,11 @@ function buildHolidayMapForYear(year){
       return errors;
     }
 
-    // Verifica max 5 giorni consecutivi dopo aver sostituito targetIso con newIsWork
-    function swapValidate5Consec(cfg, targetIso, newIsWork){
+    // Verifica max 6 giorni consecutivi dopo aver sostituito targetIso con newIsWork
+    function swapValidateConsecutiveDays(cfg, targetIso, newIsWork){
       const center = parseISODate(targetIso);
       const arr = [];
-      for(let i = -5; i <= 5; i++){
+      for(let i = -6; i <= 6; i++){
         const iso = isoDate(addDays(center, i));
         if(iso === targetIso){
           arr.push(newIsWork);
@@ -4015,7 +4015,7 @@ function buildHolidayMapForYear(year){
       }
       let maxC = 0, cur = 0;
       for(const w of arr){ if(w){ cur++; maxC = Math.max(maxC, cur); } else cur = 0; }
-      if(maxC > 5) return [`Troppi giorni consecutivi di lavoro: ${maxC} (massimo 5)`];
+      if(maxC > 6) return [`Troppi giorni consecutivi di lavoro: ${maxC} (massimo 6)`];
       return [];
     }
 
@@ -4082,7 +4082,7 @@ function buildHolidayMapForYear(year){
       // Conta max giorni lavorativi consecutivi con overrides
       function countMaxConsec(getCfgDay, center, overrides){
         let mx=0, cr=0;
-        for(let i=-5; i<=5; i++){
+        for(let i=-6; i<=6; i++){
           const iso = isoDate(addDays(center, i));
           let isWork;
           if(iso in overrides){ isWork = overrides[iso]; }
@@ -4121,13 +4121,13 @@ function buildHolidayMapForYear(year){
             const cPrev = getScheduleOnDate(c, isoDate(addDays(dTarget,-1)));
             const cNext = getScheduleOnDate(c, isoDate(addDays(dTarget,+1)));
             check11hExplicit(cPrev, dayMe, cNext, cName, errors);
-            swapValidate5Consec(c, targetISO, !dayMe.isRest).forEach(e => errors.push(`${cName}: ${e}`));
+            swapValidateConsecutiveDays(c, targetISO, !dayMe.isRest).forEach(e => errors.push(`${cName}: ${e}`));
           }
           if(cfgA){
             const mePrev = getScheduleOnDate(cfgA, isoDate(addDays(dTarget,-1)));
             const meNext = getScheduleOnDate(cfgA, isoDate(addDays(dTarget,+1)));
             check11hExplicit(mePrev, dayC_target, meNext, 'Tu', errors);
-            swapValidate5Consec(cfgA, targetISO, !dayC_target.isRest).forEach(e => errors.push(`Tu: ${e}`));
+            swapValidateConsecutiveDays(cfgA, targetISO, !dayC_target.isRest).forEach(e => errors.push(`Tu: ${e}`));
           }
           results.push({ c, dayC_target, dayC_my: null, dayMe_target: null, isExact, errors });
 
@@ -4149,14 +4149,14 @@ function buildHolidayMapForYear(year){
               : getScheduleOnDate(c, myNextIso);
             check11hExplicit(cPrev_my, dayMe, cNext_my, cName, errors);
             const mx_c = countMaxConsec(iso => getScheduleOnDate(c, iso), dMy, { [myISO]: !dayMe.isRest, [targetISO]: false });
-            if(mx_c > 5) errors.push(`${cName}: Troppi giorni consecutivi di lavoro: ${mx_c} (massimo 5)`);
+            if(mx_c > 6) errors.push(`${cName}: Troppi giorni consecutivi di lavoro: ${mx_c} (massimo 6)`);
           }
 
           const meNext_target = cfgA ? getScheduleOnDate(cfgA, isoDate(addDays(dTarget,+1))) : null;
           check11hExplicit(dayC_my || null, dayC_target, meNext_target, 'Tu', errors);
           if(cfgA){
             const mx_me = countMaxConsec(iso => getScheduleOnDate(cfgA, iso), dTarget, { [myISO]: false, [targetISO]: !dayC_target.isRest });
-            if(mx_me > 5) errors.push(`Tu: Troppi giorni consecutivi di lavoro: ${mx_me} (massimo 5)`);
+            if(mx_me > 6) errors.push(`Tu: Troppi giorni consecutivi di lavoro: ${mx_me} (massimo 6)`);
           }
 
           results.push({ c, dayC_target, dayC_my, dayMe_target, isExact, errors });

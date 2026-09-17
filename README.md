@@ -28,7 +28,7 @@ Web app single-page per la visualizzazione e generazione della **matrice settima
 - 🔒 **Pannello admin** protetto da password per gestire il team
 - 👥 **Gestione team**: aggiungi/modifica/elimina colleghi con ciclo, ruolo e team personalizzati
 - 🔍 **Trova Collega**: chi è in turno in un dato momento? Vista tabella, schede e matrice colleghi
-- 🔄 **Scambi Orari**: cerca colleghi disponibili per scambiare un turno o un intero giorno, con validazione contrattuale (11h riposo, 5 giorni consecutivi) calcolata sul post-scambio
+- 🔄 **Scambi Orari**: cerca colleghi disponibili per scambiare un turno o un intero giorno, con validazione contrattuale (11h riposo, 6 giorni consecutivi) calcolata sul post-scambio
 - ☁️ **Sincronizzazione Firebase Firestore**: dati persistenti su tutti i dispositivi
 - 💾 Fallback **localStorage** se Firebase non è disponibile
 
