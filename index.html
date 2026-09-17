@@ -2425,11 +2425,29 @@ function buildHolidayMapForYear(year){
       renderTeamList();
     }
 
+    function closeOtherMainSections(selected){
+      [['settingsCard','generateSettingsBtn'], ['turniHub','cercaOrarioBtn'], ['teamCard','orarioColleghiBtn']].forEach(([id,button]) => {
+        if(id === selected) return;
+        const card = document.getElementById(id);
+        if(id === 'settingsCard') card.hidden = true;
+        else card.style.display = 'none';
+        const btn = document.getElementById(button);
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded','false');
+      });
+      ['rientriModal','scanModal','richiesteModal'].forEach(id => {
+        if(id !== selected && document.getElementById(id).classList.contains('is-open')) closeModal(id);
+      });
+      document.getElementById('previewCard').style.display = selected === 'settingsCard' && state.generated ? '' : 'none';
+    }
+
     function bindAdminModal(){
       document.getElementById('sidebarGenerate').addEventListener('click', () => {
         if(!isAdminSession()) return;
         const card = document.getElementById('settingsCard');
+        closeOtherMainSections('settingsCard');
         card.hidden = !card.hidden;
+        document.getElementById('previewCard').style.display = !card.hidden && state.generated ? '' : 'none';
         const btn = document.getElementById('generateSettingsBtn');
         btn.setAttribute('aria-expanded', String(!card.hidden));
         btn.classList.toggle('active', !card.hidden);
@@ -2476,6 +2494,7 @@ function buildHolidayMapForYear(year){
       passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('confirmAdminBtn').click(); });
 
       document.getElementById('cercaOrarioBtn').addEventListener('click', ()=>{
+        closeOtherMainSections('turniHub');
         const hub = document.getElementById('turniHub');
         const visible = hub.style.display !== 'none';
         hub.style.display = visible ? 'none' : '';
@@ -2484,6 +2503,7 @@ function buildHolidayMapForYear(year){
       });
 
       document.getElementById('orarioColleghiBtn').addEventListener('click', ()=>{
+        closeOtherMainSections('teamCard');
         const teamC = document.getElementById('teamCard');
         const btn   = document.getElementById('orarioColleghiBtn');
         if(!teamC) return;
@@ -2498,6 +2518,7 @@ function buildHolidayMapForYear(year){
       });
 
       document.getElementById('rientriBtn').addEventListener('click', ()=>{
+        closeOtherMainSections('rientriModal');
         initRientriModal();
         openModal('rientriModal');
       });
@@ -2505,7 +2526,7 @@ function buildHolidayMapForYear(year){
       document.getElementById('rientriCancelBtn').addEventListener('click', ()=>closeModal('rientriModal'));
       document.getElementById('rientriModal').addEventListener('click', e=>{ if(e.target.id==='rientriModal') closeModal('rientriModal'); });
 
-      document.getElementById('scanBtn').addEventListener('click', ()=> openModal('scanModal'));
+      document.getElementById('scanBtn').addEventListener('click', ()=> { closeOtherMainSections('scanModal'); openModal('scanModal'); });
 
       document.getElementById('adminLockBtn').addEventListener('click', ()=>{
         if(isAdminSession()){
@@ -6771,6 +6792,7 @@ function buildHolidayMapForYear(year){
 
     // Bind bottoni Richieste
     function openRichiesteModal(){
+      closeOtherMainSections('richiesteModal');
       refreshRichieste();
       openModal('richiesteModal');
     }
